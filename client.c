@@ -125,17 +125,17 @@ void sendMsg(int socketfd){
     int n;
     for(;;){
         bzero(buffer,sizeof(buffer));
-        printf("Enter string");
+        printf("Enter string\n");
         n=0;
-        while((buffer[n++]=getchar())!='\n'){
+        while((buffer[n++]=getchar())!='\n');
             write(socketfd, buffer, sizeof(buffer));
             bzero(buffer,sizeof(buffer));
             read(socketfd,buffer,sizeof(buffer));
-            printf("From server");
-            if(strcmp(buffer,"exit")==0){
+            printf("From server: %s",buffer);
+            if(strncmp(buffer,"exit",4)==0){
                 printf("Client exit");
                 break;
             }
-        }
+        
     }
 }

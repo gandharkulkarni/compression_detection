@@ -54,7 +54,7 @@ void main(){
         printf("server accept the client...\n");
    
     // Function for chatting between client and server
-    func(connfd);
+    receiveMsg(connfd);
    
     // After chatting close the socket
     close(sockfd);
