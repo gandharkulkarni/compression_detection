@@ -22,69 +22,15 @@ struct config{
     int udp_packets;
     int time_to_live;
 };
-void main(){
-    int sockfd, connfd, len;
-    struct sockaddr_in servaddr, cli;
-   
-    // socket create and verification
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1) {
-        printf("socket creation failed...\n");
-        exit(0);
-    }
-    else
-        printf("Socket successfully created..\n");
-    bzero(&servaddr, sizeof(servaddr));
-   
-    // assign IP, PORT
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(8080);
-   
-    // Binding newly created socket to given IP and verification
-    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
-        printf("socket bind failed...\n");
-        exit(0);
-    }
-    else
-        printf("Socket successfully binded..\n");
-   
-    // Now server is ready to listen and verification
-    if ((listen(sockfd, 5)) != 0) {
-        printf("Listen failed...\n");
-        exit(0);
-    }
-    else
-        printf("Server listening..\n");
-    len = sizeof(cli);
-   
-    // Accept the data packet from client and verification
-    connfd = accept(sockfd, (SA*)&cli, &len);
-    if (connfd < 0) {
-        printf("server accept failed...\n");
-        exit(0);
-    }
-    else
-        printf("server accept the client...\n");
-   
-    // Function for chatting between client and server
-    struct config *config = receiveMsg(connfd);
-   
-    // After chatting close the socket
-    close(sockfd);
-}
-
-struct config* receiveMsg(int connfd){
+struct config *get_config_file(int connfd){
     char buff[8000];
     int n;
     bzero(buff, 80);
-    // read the message from client and copy it in buffer
+    /* read the config from client and copy it in buffer */
     read(connfd, buff, sizeof(buff));
     char* output;
     output = &buff;
-    // print buffer which contains the client contents
-    printf("From client: %s\t", output);
-    //bzero(buff, 80);
+    
     cJSON* json = cJSON_Parse(output);
     const cJSON *server_ip = NULL;
     const cJSON *src_port_udp = NULL;
@@ -121,4 +67,59 @@ struct config* receiveMsg(int connfd){
     config->inter_measurement_time = inter_measurement_time->valueint;
     config->udp_packets = udp_packets->valueint;
     config->time_to_live = time_to_live->valueint;
+}
+void main(int argc, char *args[]){
+    if(argc<2){
+        printf("Insufficient arguments. Please provide config file.\n");
+        return;
+    }
+    int tcp_listen_port = atol(args[1]);
+    int sockfd, connfd, len;
+    struct sockaddr_in servaddr, cli;
+   
+    /* socket create */
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1) {
+        printf("socket creation failed...\n");
+        exit(0);
+    }
+    else
+        printf("Socket successfully created..\n");
+    bzero(&servaddr, sizeof(servaddr));
+   
+    /* assign IP, PORT */
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(tcp_listen_port);
+   
+    /* Binding socket to given IP */
+    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
+        printf("socket bind failed...\n");
+        exit(0);
+    }
+    else
+        printf("Socket successfully binded..\n");
+   
+    /* Server listen */
+    if ((listen(sockfd, 5)) != 0) {
+        printf("Listen failed...\n");
+        exit(0);
+    }
+    else
+        printf("Server listening..\n");
+    len = sizeof(cli);
+   
+    /* Accept the data packet from client */
+    connfd = accept(sockfd, (SA*)&cli, &len);
+    if (connfd < 0) {
+        printf("server accept failed...\n");
+        exit(0);
+    }
+    else
+        printf("server accept the client...\n");
+   
+    /* Get config file from client */
+    struct config *config = get_config_file(connfd);
+   
+    close(sockfd);
 }
