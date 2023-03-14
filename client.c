@@ -29,7 +29,9 @@ struct config* read_config_file(char* path){
     fread(buffer,1024,1,fp);
     /* Parse json file */
     cJSON* json = cJSON_Parse(buffer);
+    char* string = cJSON_Print(json);
     fclose(fp);
+    connectToServer(string);
 
     const cJSON *server_ip = NULL;
     const cJSON *src_port_udp = NULL;
@@ -74,9 +76,11 @@ void main(int argc, char *args[]){
         printf("Insufficient arguments. Please provide config file.\n");
         return;
     }
-    /*
+    
+    //char* string = cJSON_Print(json);
     char* config_path = args[1];
     struct config *config = read_config_file(config_path);
+    /*Parse config file*/
     printf("%s\n", config->server_ip);
     printf("%d\n", config->source_port_udp);
     printf("%d\n", config->destination_port_udp);
@@ -87,9 +91,12 @@ void main(int argc, char *args[]){
     printf("%d\n", config->inter_measurement_time);
     printf("%d\n", config->udp_packets);
     printf("%d\n", config->time_to_live);
-    */
-   int sockfd, connfd;
-   struct sockaddr_in servaddr, cli;
+    
+}
+
+void connectToServer(char* msg){
+    int sockfd, connfd;
+    struct sockaddr_in servaddr, cli;
  
     // socket create and verification
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -116,26 +123,17 @@ void main(int argc, char *args[]){
         printf("connected to the server..\n");
  
     // function for chat
-    sendMsg(sockfd);
+    sendMsg(sockfd, msg);
     close(sockfd);
 }
 
-void sendMsg(int socketfd){
-    char buffer[80];
+void sendMsg(int socketfd, char* msg){
+    char buffer[8000];
     int n;
-    for(;;){
-        bzero(buffer,sizeof(buffer));
-        printf("Enter string\n");
-        n=0;
-        while((buffer[n++]=getchar())!='\n');
-            write(socketfd, buffer, sizeof(buffer));
-            bzero(buffer,sizeof(buffer));
-            read(socketfd,buffer,sizeof(buffer));
-            printf("From server: %s",buffer);
-            if(strncmp(buffer,"exit",4)==0){
-                printf("Client exit");
-                break;
-            }
-        
-    }
+    bzero(buffer,sizeof(buffer));
+    printf("Enter string\n");
+    n=0;
+    strcpy(buffer,msg);
+    write(socketfd, buffer, sizeof(buffer));
+    bzero(buffer,sizeof(buffer));
 }
