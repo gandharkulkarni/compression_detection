@@ -29,7 +29,7 @@ struct cJSON *read_config(char* path){
     /* Opening file in reading mode */
     fp = fopen(path, "r");
     fread(buffer,1024,1,fp);
-    
+
     /* Parse json file */
     cJSON* json = cJSON_Parse(buffer);
     fclose(fp);
@@ -78,7 +78,7 @@ void send_config_to_server(char* msg){
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
  
-    /* socket create */
+    /* socket create for TCP connection */
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
         printf("socket creation failed...\n");
@@ -102,13 +102,72 @@ void send_config_to_server(char* msg){
     else
         printf("connected to the server..\n");
  
-    char buffer[8000];
+    char buffer[1024];
     int n;
     bzero(buffer,sizeof(buffer));
     n=0;
     strcpy(buffer,msg);
     write(sockfd, buffer, sizeof(buffer));
     bzero(buffer,sizeof(buffer));
+    read(sockfd, buffer, sizeof(buffer));
+    printf("Server response: %s\n", buffer);
+    close(sockfd);
+}
+void send_udp_packets_to_server(){
+    int sockfd;
+    char buffer[1024];
+    struct sockaddr_in servaddr, srcaddr;
+    char *hello = "Hello from client";
+    /* Creating socket for UDP connection */
+    if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
+        perror("socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+    memset(&servaddr, 0, sizeof(servaddr));
+
+    // Filling server information
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(config->destination_port_udp);
+    servaddr.sin_addr.s_addr = inet_addr(config->server_ip);
+    
+    // srcaddr.sin_family = AF_INET;
+    // srcaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    // srcaddr.sin_port = htons(config->source_port_udp);
+
+    // int df_bit = IP_PMTUDISC_DO;
+    int n;
+    socklen_t len;
+    
+    // /* set DF bit*/
+    // if(setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &df_bit, sizeof(df_bit))<0){
+    //     perror("Unable to set DF bit");
+    //     exit(EXIT_FAILURE);
+    // }
+
+    // /* Bind socket to port */
+    // if(bind(sockfd, (struct sockaddr *) &srcaddr, sizeof(srcaddr)) < 0){
+	// 	printf("bind failed\n");
+	// 	exit(1);
+	// }
+    // /* Calculate total size */
+
+    // int total_data_len = config->udp_packets * config->udp_payload_size;
+
+    // uint8_t *total_data = (uint8_t *)malloc(total_data_len * sizeof(uint8_t));
+
+    // if(total_data!=NULL){
+    //     memset(total_data, 0, total_data_len * sizeof(uint8_t));
+    // }
+    // else{
+    //     printf("Could not allocate memory for payload");
+    //     exit(EXIT_FAILURE);
+    // }
+    // 
+    printf("Sending...");
+    sendto(sockfd, (const char *)hello, 1024,
+        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+            sizeof(servaddr));
+   
     close(sockfd);
 }
 void main(int argc, char *args[]){
@@ -128,8 +187,10 @@ void main(int argc, char *args[]){
     /*Get config file in a string format*/
     char * json_str = cJSON_Print(json);
 
-    /*Send config file to server*/
+    /*Pre probing : Send config file to server*/
     send_config_to_server(json_str);
+
+    send_udp_packets_to_server();
 }
 void print_config(){
     printf("%s\n", config->server_ip);
@@ -143,4 +204,3 @@ void print_config(){
     printf("%d\n", config->udp_packets);
     printf("%d\n", config->time_to_live);
 }
-
