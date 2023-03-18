@@ -60,7 +60,7 @@ struct config* get_config_struct(cJSON* json){
     time_to_live = cJSON_GetObjectItemCaseSensitive(json, "time_to_live");
 
     /* Create config struct */
-    struct config *config = malloc(sizeof *config);
+    config = malloc(sizeof *config);
     strcpy(config->server_ip,server_ip->valuestring);
     config->source_port_udp = src_port_udp->valueint;
     config->destination_port_udp = dst_port_udp->valueint;
@@ -115,9 +115,11 @@ void send_config_to_server(char* msg){
 }
 void send_udp_packets_to_server(){
     int sockfd;
-    char buffer[1024];
+    char buffer[config->udp_payload_size];
     struct sockaddr_in servaddr, srcaddr;
-    char *hello = "Hello from client";
+    memset(buffer, 0, config->udp_payload_size);
+    float threshold = 100;
+    
     /* Creating socket for UDP connection */
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
         perror("socket creation failed");
@@ -131,42 +133,43 @@ void send_udp_packets_to_server(){
     servaddr.sin_addr.s_addr = inet_addr(config->server_ip);
     
     // srcaddr.sin_family = AF_INET;
-    // srcaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    // srcaddr.sin_addr.s_addr = htonl("10.0.0.136");
     // srcaddr.sin_port = htons(config->source_port_udp);
 
-    // int df_bit = IP_PMTUDISC_DO;
+    int df_bit = IP_PMTUDISC_DO;
     int n;
     socklen_t len;
     
-    // /* set DF bit*/
-    // if(setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &df_bit, sizeof(df_bit))<0){
-    //     perror("Unable to set DF bit");
-    //     exit(EXIT_FAILURE);
-    // }
+    /* set DF bit*/
+    if(setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &df_bit, sizeof(df_bit))<0){
+        printf("Unable to set DF bit");
+        exit(EXIT_FAILURE);
+    }
 
     // /* Bind socket to port */
     // if(bind(sockfd, (struct sockaddr *) &srcaddr, sizeof(srcaddr)) < 0){
 	// 	printf("bind failed\n");
 	// 	exit(1);
 	// }
-    // /* Calculate total size */
-
-    // int total_data_len = config->udp_packets * config->udp_payload_size;
-
-    // uint8_t *total_data = (uint8_t *)malloc(total_data_len * sizeof(uint8_t));
-
-    // if(total_data!=NULL){
-    //     memset(total_data, 0, total_data_len * sizeof(uint8_t));
-    // }
-    // else{
-    //     printf("Could not allocate memory for payload");
-    //     exit(EXIT_FAILURE);
-    // }
-    // 
+    
     printf("Sending...");
-    sendto(sockfd, (const char *)hello, 1024,
-        MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+    int packet_id = 0;
+    int i;
+    
+    // sending udp packet train for low entropy
+    for(i=0; i<config->udp_packets; i++){
+        //setting packet id
+        memset(buffer, packet_id, 2);
+        packet_id += 1;
+
+        int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
+            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
+            // printf("Sent %d packets. Code : %d\n", i, n);
+    }
+    // sendto(sockfd, (const char *)hello, 1024,
+    //     MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
+    //         sizeof(servaddr));
    
     close(sockfd);
 }
@@ -182,8 +185,8 @@ void main(int argc, char *args[]){
     cJSON* json = read_config(config_path);
 
     /*Get config values into struct*/
-    config = get_config_struct(json);
-    
+    get_config_struct(json);
+
     /*Get config file in a string format*/
     char * json_str = cJSON_Print(json);
 
