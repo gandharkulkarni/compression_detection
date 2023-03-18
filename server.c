@@ -8,8 +8,10 @@
 #include <unistd.h>
 #include "cJSON.h"
 #include "cJSON.c"
+#include <time.h>
+#include <signal.h>
 #define SA struct sockaddr
-
+int break_loop = 0;
 struct config
 {
     char server_ip[50];
@@ -36,6 +38,11 @@ void print_config()
     printf("Inter measurement time : %d\n", config->inter_measurement_time);
     printf("UDP Packets : %d\n", config->udp_packets);
     printf("Time to live : %d\n}\n", config->time_to_live);
+}
+
+void break_deadlock(int sig)
+{
+  break_loop = 1;
 }
 struct config *get_config_file(int connfd)
 {
@@ -144,13 +151,14 @@ void get_config_file_from_client(int tcp_listen_port)
 void receive_packets_from_client()
 {
     int sockfd;
-    char buffer[1024];
+    char buffer[config->udp_payload_size];
     struct sockaddr_in servaddr, cliaddr;
+    memset(buffer, 0, config->udp_payload_size);
 
     // Creating socket file descriptor
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
-        perror("socket creation failed");
+        printf("socket creation failed");
         exit(EXIT_FAILURE);
     }
     printf("Socket created\n");
@@ -162,11 +170,14 @@ void receive_packets_from_client()
     servaddr.sin_addr.s_addr = INADDR_ANY;
     servaddr.sin_port = htons(config->destination_port_udp);
 
+    // cliaddr.sin_family = AF_INET;
+    // cliaddr.sin_addr.s_addr = htonl("10.0.0.136");
+    // cliaddr.sin_port = htons(config->source_port_udp);
     // Bind the socket with the server address
     if (bind(sockfd, (const struct sockaddr *)&servaddr,
              sizeof(servaddr)) < 0)
     {
-        perror("bind failed");
+        printf("bind failed");
         exit(EXIT_FAILURE);
     }
     printf("Bind successful\n");
@@ -174,12 +185,37 @@ void receive_packets_from_client()
     int n;
 
     len = sizeof(cliaddr); // len is value/result
+    clock_t low_entr_start_time, low_entr_end_time, high_entr_start_time, high_entr_end_time;
+	double total_time, low_entr_time, high_entr_time = 0;
     printf("Receiving...\n");
-    n = recvfrom(sockfd, (char *)buffer, 1024,
-                 MSG_WAITALL, (struct sockaddr *)&cliaddr,
-                 &len);
-    buffer[n] = '\0';
-    printf("Client : %s\n", buffer);
+    int i=0;
+    while(i < config->udp_packets && break_loop == 0)
+    {
+        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer) * config->udp_packets,
+                     MSG_WAITALL, (struct sockaddr *)&cliaddr,
+                     &len);
+        if (i == 0 && n > 0)
+        {
+            low_entr_start_time = clock();
+            alarm(7); // if not all packets are received after 5 seconds, then don't keep waiting
+            signal(SIGALRM, break_deadlock);
+        }
+        if(i>0 && n>0){
+            low_entr_end_time = clock();
+        }
+        i++;
+        // printf("Received low entropy packets. Count : %d \n", i);
+    }
+    //calculate time elapsed in seconds
+	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) / ((double)CLOCKS_PER_SEC);
+	low_entr_time = total_time*1000; //convert seconds to milliseconds
+    printf("%f",low_entr_time);
+    
+    // n = recvfrom(sockfd, (char *)buffer, 1024,
+    //              MSG_WAITALL, (struct sockaddr *)&cliaddr,
+    //              &len);
+    // buffer[n] = '\0';
+    // printf("Client : %s\n", buffer);
 }
 void main(int argc, char *args[])
 {
@@ -190,6 +226,6 @@ void main(int argc, char *args[])
     }
     int tcp_listen_port = atol(args[1]);
     get_config_file_from_client(tcp_listen_port);
-    //print_config();
+    // print_config();
     receive_packets_from_client();
 }
