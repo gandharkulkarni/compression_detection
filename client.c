@@ -74,7 +74,7 @@ struct config* get_config_struct(cJSON* json){
 
     return config;
 }
-void send_config_to_server(char* msg){
+void initialize_compression_detection(char* msg){
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
  
@@ -111,6 +111,9 @@ void send_config_to_server(char* msg){
     bzero(buffer,sizeof(buffer));
     read(sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
+    send_udp_packets_to_server();
+    read(sockfd, buffer, sizeof(buffer));
+    printf("%s\n",buffer);
     close(sockfd);
 }
 void send_udp_packets_to_server(){
@@ -146,15 +149,39 @@ void send_udp_packets_to_server(){
         exit(EXIT_FAILURE);
     }
 
-    // /* Bind socket to port */
-    // if(bind(sockfd, (struct sockaddr *) &srcaddr, sizeof(srcaddr)) < 0){
-	// 	printf("bind failed\n");
-	// 	exit(1);
-	// }
-    
     printf("Sending...");
-    int packet_id = 0;
+    uint16_t packet_id = 0;
     int i;
+    // sending udp packet train for low entropy
+    for(i=0; i<config->udp_packets; i++){
+        //setting packet id
+        memset(buffer, packet_id, 2);
+        packet_id += 1;
+
+        int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
+            MSG_CONFIRM, (const struct sockaddr *) &servaddr,
+            sizeof(servaddr));
+            printf("Sent %d packets. Code : %d\n", i, n);
+    }
+    printf("Low entropy UDP packets sent.\n\n");
+
+	// //convert inter-measurement time to integer
+	// unsigned int inter_measurement_time = atoi(config->inter_measurement_time);
+
+
+	printf("Waiting for %d seconds between tests.\n\n", config->inter_measurement_time);
+	/*sleep for inter-measurement time to avoid low entropy and high entropy data packets from interfering with each other  */
+	sleep(config->inter_measurement_time);
+
+
+    FILE* fp;
+    fp = fopen("highEntropyData", "r");
+    memset(buffer, 0, config->udp_payload_size);
+    fread(buffer,config->udp_payload_size,1,fp);
+    fclose(fp);
+    
+
+    packet_id = 0;
     
     // sending udp packet train for low entropy
     for(i=0; i<config->udp_packets; i++){
@@ -165,12 +192,8 @@ void send_udp_packets_to_server(){
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
-            // printf("Sent %d packets. Code : %d\n", i, n);
+            printf("Sent %d packets. Code : %d\n", i, n);
     }
-    // sendto(sockfd, (const char *)hello, 1024,
-    //     MSG_CONFIRM, (const struct sockaddr *) &servaddr, 
-    //         sizeof(servaddr));
-   
     close(sockfd);
 }
 void main(int argc, char *args[]){
@@ -191,9 +214,7 @@ void main(int argc, char *args[]){
     char * json_str = cJSON_Print(json);
 
     /*Pre probing : Send config file to server*/
-    send_config_to_server(json_str);
-
-    send_udp_packets_to_server();
+    initialize_compression_detection(json_str);
 }
 void print_config(){
     printf("%s\n", config->server_ip);
