@@ -114,12 +114,11 @@ float receive_packets_from_client()
     servaddr.sin_addr.s_addr = INADDR_ANY;
     servaddr.sin_port = htons(config->destination_port_udp);
 
-    // cliaddr.sin_family = AF_INET;
-    // cliaddr.sin_addr.s_addr = htonl("10.0.0.136");
-    // cliaddr.sin_port = htons(config->source_port_udp);
+    cliaddr.sin_family = AF_INET;
+    cliaddr.sin_port = htons(config->source_port_udp);
+
     // Bind the socket with the server address
-    if (bind(sockfd, (const struct sockaddr *)&servaddr,
-             sizeof(servaddr)) < 0)
+    if (bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
         printf("bind failed");
         exit(EXIT_FAILURE);
@@ -141,19 +140,20 @@ float receive_packets_from_client()
         if (i == 0 && n > 0)
         {
             low_entr_start_time = clock();
-            alarm(10); // if not all packets are received after 10 seconds, then don't keep waiting
+            /* break the loop if not all packets are received after 10 seconds */
+            alarm(10);
             signal(SIGALRM, break_deadlock);
         }
         if(i>0 && n>0){
             low_entr_end_time = clock();
         }
         i++;
-        // printf("Received low entropy packets. Count : %d \n", i);
+        //printf("Received low entropy packets. Count : %d \n", i);
     }
     //calculate time elapsed in seconds
 	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	low_entr_time = total_time*1000; //convert seconds to milliseconds
-    printf("%f",low_entr_time);
+    printf("%f\n",low_entr_time);
     
 
     printf("Receiving...\n");
@@ -167,13 +167,15 @@ float receive_packets_from_client()
         if (i == 0 && n > 0)
         {
             high_entr_start_time = clock();
-            alarm(10); // if not all packets are received after 10 seconds, then don't keep waiting
+            /* break the loop if not all packets are received after 10 seconds */
+            alarm(10); 
             signal(SIGALRM, break_deadlock);
         }
         if(i>0 && n>0){
             high_entr_end_time = clock();
         }
         i++;
+        //printf("%ld",high_entr_end_time);
         //printf("Received high entropy packets. Count : %d \n", i);
     }
 
@@ -242,15 +244,6 @@ void get_config_file_from_client(int tcp_listen_port)
     get_config_file(connfd);
     char *response = "Configuration received";
     write(connfd, response, sizeof(response) * strlen(response));
-    float threshold = 100;
-    float difference = receive_packets_from_client();
-    if(difference>threshold){
-        response = "Compression detected";
-    }
-    else{
-        response = "No compression detected";
-    }
-    write(connfd, response, sizeof(response) * strlen(response));
     close(sockfd);
 }
 void main(int argc, char *args[])
@@ -262,6 +255,16 @@ void main(int argc, char *args[])
     }
     int tcp_listen_port = atol(args[1]);
     get_config_file_from_client(tcp_listen_port);
-    // print_config();
-    //receive_packets_from_client();
+
+    float threshold = 100;
+    float difference = receive_packets_from_client();
+    char *response;
+    if(difference>threshold){
+        response = "Compression detected";
+    }
+    else{
+        response = "No compression detected";
+    }
+    printf("%s\n",response);
+    //write(connfd, response, sizeof(response) * strlen(response));
 }
