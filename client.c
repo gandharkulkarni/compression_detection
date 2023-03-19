@@ -8,6 +8,7 @@
 #include<sys/socket.h>
 #include<sys/types.h>
 #include<unistd.h>
+#include<arpa/inet.h>
 #define SA struct sockaddr
 struct config{
     char server_ip[50];
@@ -111,17 +112,41 @@ void initialize_compression_detection(char* msg){
     bzero(buffer,sizeof(buffer));
     read(sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
-    send_udp_packets_to_server();
-    read(sockfd, buffer, sizeof(buffer));
-    printf("%s\n",buffer);
     close(sockfd);
 }
 void send_udp_packets_to_server(){
     int sockfd;
     char buffer[config->udp_payload_size];
-    struct sockaddr_in servaddr, srcaddr;
+    struct sockaddr_in servaddr, cliaddr;
     memset(buffer, 0, config->udp_payload_size);
     float threshold = 100;
+
+    /* char hostbuffer[256];
+    char *IPbuffer;
+    struct hostent *host_entry;
+    int hostname;
+    // To retrieve client information
+    hostname  = gethostname(hostbuffer, sizeof(hostbuffer));
+    if (hostname == -1)
+    {
+        perror("Error getting host name");
+        exit(EXIT_FAILURE);
+    }
+    host_entry = gethostbyname(hostbuffer);
+    if (host_entry == NULL)
+    {
+        perror("Error getting host information");
+        exit(EXIT_FAILURE);
+    }
+  
+    IPbuffer = inet_ntoa(*((struct in_addr*)
+                           host_entry->h_addr_list[0]));
+    if (IPbuffer == NULL)
+    {
+        perror("Error getting IP address");
+        exit(EXIT_FAILURE);
+    }
+    */
     
     /* Creating socket for UDP connection */
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -135,13 +160,16 @@ void send_udp_packets_to_server(){
     servaddr.sin_port = htons(config->destination_port_udp);
     servaddr.sin_addr.s_addr = inet_addr(config->server_ip);
     
-    // srcaddr.sin_family = AF_INET;
-    // srcaddr.sin_addr.s_addr = htonl("10.0.0.136");
-    // srcaddr.sin_port = htons(config->source_port_udp);
+    cliaddr.sin_family = AF_INET;
+    cliaddr.sin_port = htons(config->source_port_udp);
+
+
+    if(bind(sockfd, (struct sockaddr *) &cliaddr, sizeof(cliaddr)) < 0){
+		printf("bind failed\n");
+		exit(EXIT_FAILURE);
+	}
 
     int df_bit = IP_PMTUDISC_DO;
-    int n;
-    socklen_t len;
     
     /* set DF bit*/
     if(setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &df_bit, sizeof(df_bit))<0){
@@ -150,13 +178,11 @@ void send_udp_packets_to_server(){
     }
 
     printf("Sending...");
-    uint16_t packet_id = 0;
     int i;
-    // sending udp packet train for low entropy
+    /* sending udp packet train for low entropy */
     for(i=0; i<config->udp_packets; i++){
-        //setting packet id
-        memset(buffer, packet_id, 2);
-        packet_id += 1;
+        buffer[0] = (i >> 8) & 0xFF;
+        buffer[1] = i & 0xff;
 
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
@@ -165,14 +191,9 @@ void send_udp_packets_to_server(){
     }
     printf("Low entropy UDP packets sent.\n\n");
 
-	// //convert inter-measurement time to integer
-	// unsigned int inter_measurement_time = atoi(config->inter_measurement_time);
-
-
 	printf("Waiting for %d seconds between tests.\n\n", config->inter_measurement_time);
-	/*sleep for inter-measurement time to avoid low entropy and high entropy data packets from interfering with each other  */
+	/* sleep for inter-measurement time */
 	sleep(config->inter_measurement_time);
-
 
     FILE* fp;
     fp = fopen("highEntropyData", "r");
@@ -180,14 +201,10 @@ void send_udp_packets_to_server(){
     fread(buffer,config->udp_payload_size,1,fp);
     fclose(fp);
     
-
-    packet_id = 0;
-    
-    // sending udp packet train for low entropy
+    /* sending udp packet train for high entropy */
     for(i=0; i<config->udp_packets; i++){
-        //setting packet id
-        memset(buffer, packet_id, 2);
-        packet_id += 1;
+        buffer[0] = (i >> 8) & 0xFF;
+        buffer[1] = i & 0xff;
 
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
@@ -215,6 +232,8 @@ void main(int argc, char *args[]){
 
     /*Pre probing : Send config file to server*/
     initialize_compression_detection(json_str);
+
+    send_udp_packets_to_server();
 }
 void print_config(){
     printf("%s\n", config->server_ip);
