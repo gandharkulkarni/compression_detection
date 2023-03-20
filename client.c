@@ -10,6 +10,7 @@
 #include<unistd.h>
 #include<arpa/inet.h>
 #define SA struct sockaddr
+int tcp_sockfd, udp_sockfd;
 struct config{
     char server_ip[50];
     int source_port_udp;
@@ -36,7 +37,10 @@ struct cJSON *read_config(char* path){
     fclose(fp);
     return json;
 }
-struct config* get_config_struct(cJSON* json){
+void close_tcp_connection(){
+    close(tcp_sockfd);
+}
+void get_config_struct(cJSON* json){
     const cJSON *server_ip = NULL;
     const cJSON *src_port_udp = NULL;
     const cJSON *dst_port_udp = NULL;
@@ -72,10 +76,8 @@ struct config* get_config_struct(cJSON* json){
     config->inter_measurement_time = inter_measurement_time->valueint;
     config->udp_packets = udp_packets->valueint;
     config->time_to_live = time_to_live->valueint;
-
-    return config;
 }
-void initialize_compression_detection(char* msg){
+void connect_to_server(){
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
  
@@ -102,17 +104,32 @@ void initialize_compression_detection(char* msg){
     }
     else
         printf("connected to the server..\n");
- 
+    tcp_sockfd = sockfd;
+    // char buffer[1024];
+    // int n;
+    // bzero(buffer,sizeof(buffer));
+    // n=0;
+    // strcpy(buffer,msg);
+    // write(sockfd, buffer, sizeof(buffer));
+    // bzero(buffer,sizeof(buffer));
+    // read(sockfd, buffer, sizeof(buffer));
+    // printf("Server response: %s\n", buffer);
+    // close(sockfd);
+}
+void send_config_to_server(char * config){
     char buffer[1024];
-    int n;
     bzero(buffer,sizeof(buffer));
-    n=0;
-    strcpy(buffer,msg);
-    write(sockfd, buffer, sizeof(buffer));
+    strcpy(buffer,config);
+    write(tcp_sockfd, buffer, sizeof(buffer));
     bzero(buffer,sizeof(buffer));
-    read(sockfd, buffer, sizeof(buffer));
+    read(tcp_sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
-    close(sockfd);
+}
+void get_test_results_from_server(){
+    char buffer[1024];
+    bzero(buffer,sizeof(buffer));
+    read(tcp_sockfd, buffer, sizeof(buffer));
+    printf("Server response: %s\n", buffer);
 }
 void send_udp_packets_to_server(){
     int sockfd;
@@ -120,33 +137,6 @@ void send_udp_packets_to_server(){
     struct sockaddr_in servaddr, cliaddr;
     memset(buffer, 0, config->udp_payload_size);
     float threshold = 100;
-
-    /* char hostbuffer[256];
-    char *IPbuffer;
-    struct hostent *host_entry;
-    int hostname;
-    // To retrieve client information
-    hostname  = gethostname(hostbuffer, sizeof(hostbuffer));
-    if (hostname == -1)
-    {
-        perror("Error getting host name");
-        exit(EXIT_FAILURE);
-    }
-    host_entry = gethostbyname(hostbuffer);
-    if (host_entry == NULL)
-    {
-        perror("Error getting host information");
-        exit(EXIT_FAILURE);
-    }
-  
-    IPbuffer = inet_ntoa(*((struct in_addr*)
-                           host_entry->h_addr_list[0]));
-    if (IPbuffer == NULL)
-    {
-        perror("Error getting IP address");
-        exit(EXIT_FAILURE);
-    }
-    */
     
     /* Creating socket for UDP connection */
     if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
@@ -187,7 +177,9 @@ void send_udp_packets_to_server(){
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
-            printf("Sent %d packets. Code : %d\n", i, n);
+            if(i%1000==0){
+                printf("Sent %d packets. Code : %d\n", i, n);
+            }
     }
     printf("Low entropy UDP packets sent.\n\n");
 
@@ -209,7 +201,9 @@ void send_udp_packets_to_server(){
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
-            printf("Sent %d packets. Code : %d\n", i, n);
+            if(i%1000==0){
+                printf("Sent %d packets. Code : %d\n", i, n);
+            }
     }
     close(sockfd);
 }
@@ -231,9 +225,17 @@ void main(int argc, char *args[]){
     char * json_str = cJSON_Print(json);
 
     /*Pre probing : Send config file to server*/
-    initialize_compression_detection(json_str);
-
+    connect_to_server();
+    send_config_to_server(json_str);
+    close_tcp_connection();
+    
     send_udp_packets_to_server();
+
+    connect_to_server();
+    sleep(7);
+    get_test_results_from_server();
+    close_tcp_connection();
+
 }
 void print_config(){
     printf("%s\n", config->server_ip);
