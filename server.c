@@ -12,6 +12,7 @@
 #include <signal.h>
 #define SA struct sockaddr
 int break_loop = 0;
+int tcp_sockfd, udp_sockfd;
 struct config
 {
     char server_ip[50];
@@ -44,7 +45,10 @@ void break_deadlock(int sig)
 {
   break_loop = 1;
 }
-struct config *get_config_file(int connfd)
+void close_tcp_connection(){
+    close(tcp_sockfd);
+}
+void initialize_config(int connfd)
 {
     char buff[4096];
     int n;
@@ -134,9 +138,7 @@ float receive_packets_from_client()
     int i=0;
     while(i < config->udp_packets && break_loop == 0)
     {
-        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer) * config->udp_packets,
-                     MSG_WAITALL, (struct sockaddr *)&cliaddr,
-                     &len);
+        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer),MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
         if (i == 0 && n > 0)
         {
             low_entr_start_time = clock();
@@ -153,7 +155,7 @@ float receive_packets_from_client()
     //calculate time elapsed in seconds
 	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	low_entr_time = total_time*1000; //convert seconds to milliseconds
-    printf("%f\n",low_entr_time);
+    printf("Low entropy packet train : Size: %d, time :%f\n", i, low_entr_time);
     
 
     printf("Receiving...\n");
@@ -161,7 +163,7 @@ float receive_packets_from_client()
     break_loop=0;
     while(i < config->udp_packets && break_loop == 0)
     {
-        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer) * config->udp_packets,
+        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer),
                      MSG_WAITALL, (struct sockaddr *)&cliaddr,
                      &len);
         if (i == 0 && n > 0)
@@ -181,16 +183,11 @@ float receive_packets_from_client()
 
     total_time = (((double)high_entr_end_time) - ((double)high_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	high_entr_time = total_time*1000; //convert seconds to milliseconds
-    printf("%f\n",high_entr_time);
+    printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
     printf("Difference: %f\n", high_entr_time-low_entr_time);
     return high_entr_time-low_entr_time;
-    // n = recvfrom(sockfd, (char *)buffer, 1024,
-    //              MSG_WAITALL, (struct sockaddr *)&cliaddr,
-    //              &len);
-    // buffer[n] = '\0';
-    // printf("Client : %s\n", buffer);
 }
-void get_config_file_from_client(int tcp_listen_port)
+int listen_on_port(int tcp_listen_port)
 {
     int sockfd, connfd, len;
     struct sockaddr_in servaddr, cli;
@@ -210,6 +207,12 @@ void get_config_file_from_client(int tcp_listen_port)
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     servaddr.sin_port = htons(tcp_listen_port);
+    int optval = 1;
+    if (setsockopt (sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof (optval)) < 0)
+    {
+        perror("couldnt reuse address");
+        exit(EXIT_FAILURE);
+    }
 
     /* Binding socket to given IP */
     if ((bind(sockfd, (SA *)&servaddr, sizeof(servaddr))) != 0)
@@ -239,12 +242,14 @@ void get_config_file_from_client(int tcp_listen_port)
     }
     else
         printf("server accept the client...\n");
-
+    
+    tcp_sockfd = sockfd;
+    return connfd;
     /* Get config file from client */
-    get_config_file(connfd);
-    char *response = "Configuration received";
-    write(connfd, response, sizeof(response) * strlen(response));
-    close(sockfd);
+    // get_config_file(connfd);
+    // char *response = "Configuration received";
+    // write(connfd, response, sizeof(response) * strlen(response));
+    // close(sockfd);
 }
 void main(int argc, char *args[])
 {
@@ -254,11 +259,15 @@ void main(int argc, char *args[])
         return;
     }
     int tcp_listen_port = atol(args[1]);
-    get_config_file_from_client(tcp_listen_port);
+    int connfd = listen_on_port(tcp_listen_port);
+
+    initialize_config(connfd);
+    char *response = "Configuration received";
+    write(connfd, response, sizeof(response) * strlen(response));
+    close_tcp_connection();
 
     float threshold = 100;
     float difference = receive_packets_from_client();
-    char *response;
     if(difference>threshold){
         response = "Compression detected";
     }
@@ -266,5 +275,7 @@ void main(int argc, char *args[])
         response = "No compression detected";
     }
     printf("%s\n",response);
-    //write(connfd, response, sizeof(response) * strlen(response));
+    connfd = listen_on_port(tcp_listen_port);
+    write(connfd, response, sizeof(response) * strlen(response));
+    close_tcp_connection();
 }
