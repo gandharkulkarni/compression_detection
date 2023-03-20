@@ -231,8 +231,8 @@ void main(int argc, char *args[]){
     
     send_udp_packets_to_server();
 
-    connect_to_server();
     sleep(7);
+    connect_to_server();
     get_test_results_from_server();
     close_tcp_connection();
 
