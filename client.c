@@ -171,9 +171,13 @@ void send_udp_packets_to_server(){
     int i;
     /* sending udp packet train for low entropy */
     for(i=0; i<config->udp_packets; i++){
-        buffer[0] = (i >> 8) & 0xFF;
-        buffer[1] = i & 0xff;
+        unsigned int temp = i;
+        unsigned char lsb = (unsigned)(temp>> 8) & 0xff; 
+        unsigned char msb = (unsigned)temp & 0xff; 
+        buffer[0] = lsb; //set the first index to lower bit
+        buffer[1] = msb; //set the second index to upper bit
 
+        usleep(200);
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
@@ -195,9 +199,18 @@ void send_udp_packets_to_server(){
     
     /* sending udp packet train for high entropy */
     for(i=0; i<config->udp_packets; i++){
-        buffer[0] = (i >> 8) & 0xFF;
-        buffer[1] = i & 0xff;
+        // buffer[0] = (i >> 8) & 0xFF;
+        // buffer[1] = i & 0xff;
+        // buffer[0] = (unsigned) i & 0xff;
+        // buffer[1] = (unsigned) i>>8;
 
+        unsigned int temp = i;
+        unsigned char lsb = (unsigned)(temp>> 8) & 0xff; 
+        unsigned char msb = (unsigned)temp & 0xff; 
+        buffer[0] = lsb; //set the first index to lower bit
+        buffer[1] = msb; //set the second index to upper bit
+
+        usleep(200);
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
