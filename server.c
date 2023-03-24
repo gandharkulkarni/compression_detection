@@ -143,11 +143,14 @@ float receive_packets_from_client()
         {
             low_entr_start_time = clock();
             /* break the loop if not all packets are received after 10 seconds */
-            alarm(10);
-            signal(SIGALRM, break_deadlock);
+            //alarm(10);
+            //signal(SIGALRM, break_deadlock);
         }
         if(i>0 && n>0){
             low_entr_end_time = clock();
+        }
+        if(i%1000==0){
+                printf("Received %d packets. Code : %d\n", i, n);
         }
         i++;
         //printf("Received low entropy packets. Count : %d \n", i);
@@ -170,11 +173,14 @@ float receive_packets_from_client()
         {
             high_entr_start_time = clock();
             /* break the loop if not all packets are received after 10 seconds */
-            alarm(10); 
-            signal(SIGALRM, break_deadlock);
+            //alarm(10); 
+            //signal(SIGALRM, break_deadlock);
         }
         if(i>0 && n>0){
             high_entr_end_time = clock();
+        }
+        if(i%1000==0){
+                printf("Received %d packets. Code : %d\n", i, n);
         }
         i++;
         //printf("%ld",high_entr_end_time);
