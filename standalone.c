@@ -403,7 +403,7 @@ void capture_packets()
   // Interface to receive packet through.
   strcpy(interface, "enp0s3");
 }
-int send_packets(int entropy_flag)
+int send_packets(int tcp_port, int entropy_flag)
 {
   int i, status, frame_length, sd, bytes, *ip_flags, *tcp_flags;
   char *interface, *target, *src_ip, *dst_ip;
@@ -579,7 +579,8 @@ int send_packets(int entropy_flag)
   tcphdr.th_sport = htons(4444);
 
   // Head Syn Destination port number (16 bits)
-  tcphdr.th_dport = htons(atoi(config->destination_port_tcp_head_syn));
+  // tcphdr.th_dport = htons(atoi(config->destination_port_tcp_head_syn));
+  tcphdr.th_dport = htons(tcp_port);
 
   // Sequence number (32 bits)
   tcphdr.th_seq = htonl(0);
@@ -712,171 +713,171 @@ int send_packets(int entropy_flag)
   // Close socket descriptor.
   close(sd);
 
-  send_udp_packet_train(entropy_flag);
+  // send_udp_packet_train(entropy_flag);
 
-  struct ip iphdr_2; // create second ip packet header
+  // struct ip iphdr_2; // create second ip packet header
 
-  // copy data from first ip header, overwrite necessary information
-  memcpy(&iphdr_2, &iphdr, sizeof(struct ip));
+  // // copy data from first ip header, overwrite necessary information
+  // memcpy(&iphdr_2, &iphdr, sizeof(struct ip));
+
+  // // // IPv4 header
+
+  // // // IPv4 header length (4 bits): Number of 32-bit words in header = 5
+  // // iphdr_2.ip_hl = IP4_HDRLEN / sizeof(uint32_t);
+
+  // // // Internet Protocol version (4 bits): IPv4
+  // // iphdr_2.ip_v = 4;
+
+  // // // Type of service (8 bits)
+  // // iphdr_2.ip_tos = 0;
+
+  // // // Total length of datagram (16 bits): IP header + TCP header
+  // // iphdr_2.ip_len = htons(IP4_HDRLEN + TCP_HDRLEN);
+
+  // // // ID sequence number (16 bits): unused, since single datagram
+  // // iphdr_2.ip_id = htons(0);
+
+  // // // Flags, and Fragmentation offset (3, 13 bits): 0 since single datagram
+
+  // // // Zero (1 bit)
+  // // ip_flags[0] = 0;
+
+  // // // Do not fragment flag (1 bit)
+  // // ip_flags[1] = 0;
+
+  // // // More fragments following flag (1 bit)
+  // // ip_flags[2] = 0;
+
+  // // // Fragmentation offset (13 bits)
+  // // ip_flags[3] = 0;
+
+  // // iphdr_2.ip_off = htons((ip_flags[0] << 15) + (ip_flags[1] << 14) + (ip_flags[2] << 13) + ip_flags[3]);
+
+  // // // Time-to-Live (8 bits): default to maximum value
+  // // iphdr_2.ip_ttl = 255;
+
+  // // // Transport layer protocol (8 bits): 6 for TCP
+  // // iphdr_2.ip_p = IPPROTO_TCP;
+
+  // // // Source IPv4 address (32 bits)
+  // // if ((status = inet_pton(AF_INET, src_ip, &(iphdr_2.ip_src))) != 1)
+  // // {
+  // //   fprintf(stdout, "inet_pton() failed for source address.\nError message: %s", strerror(status));
+  // //   printf("inet_pton() failed for source address.\nError message: %s", strerror(status));
+  // //   exit(EXIT_FAILURE);
+  // // }
+
+  // // // Destination IPv4 address (32 bits)
+  // // if ((status = inet_pton(AF_INET, dst_ip, &(iphdr_2.ip_dst))) != 1)
+  // // {
+  // //   fprintf(stdout, "inet_pton() failed for destination address.\nError message: %s", strerror(status));
+  // //   printf("inet_pton() failed for destination address.\nError message: %s", strerror(status));
+  // //   exit(EXIT_FAILURE);
+  // // }
+
+  // // calculate checksum for ip header
+  // iphdr_2.ip_sum = checksum((uint16_t *)&iphdr_2, IP4_HDRLEN);
+
+  // // create second tcp header copied from the first one
+  // // overwrite relevant information
+  // struct tcphdr tcphdr_2;
+  // memcpy(&tcphdr_2, &tcphdr, sizeof(struct tcphdr));
+
+  // // // Source port number (16 bits)
+  // // tcphdr_2.th_sport = htons(4444);
+
+  // tcphdr_2.th_dport = htons(atoi(config->destination_port_tcp_tail_syn)); // set tail syn port
+
+  // tcphdr_2.th_seq = htonl(0); // sequence # is 1 because second packet
+
+  // // // Acknowledgement number (32 bits): 1 in second packet of SYN/ACK process
+  // // tcphdr_2.th_ack = htonl(1);
+
+  // // // Reserved (4 bits): should be 0
+  // // tcphdr_2.th_x2 = 0;
+
+  // // // Data offset (4 bits): size of TCP header in 32-bit words
+  // // tcphdr_2.th_off = TCP_HDRLEN / 4;
+
+  // // // Flags (8 bits)
+
+  // // // FIN flag (1 bit)
+  // // tcp_flags[0] = 0;
+
+  // // // SYN flag (1 bit): set to 1
+  // // tcp_flags[1] = 1;
+
+  // // // RST flag (1 bit)
+  // // tcp_flags[2] = 0;
+
+  // // // PSH flag (1 bit)
+  // // tcp_flags[3] = 0;
+
+  // // // ACK flag (1 bit)
+  // // tcp_flags[4] = 0;
+
+  // // // URG flag (1 bit)
+  // // tcp_flags[5] = 0;
+
+  // // // ECE flag (1 bit)
+  // // tcp_flags[6] = 0;
+
+  // // // CWR flag (1 bit)
+  // // tcp_flags[7] = 0;
+
+  // // tcphdr_2.th_flags = 0;
+  // // for (i = 0; i < 8; i++)
+  // // {
+  // //   tcphdr_2.th_flags += (tcp_flags[i] << i);
+  // // }
+
+  // // // Window size (16 bits)
+  // // tcphdr_2.th_win = htons(65535);
+
+  // // // Urgent pointer (16 bits): 0 (only valid if URG flag is set)
+  // // tcphdr_2.th_urp = htons(0);
+
+  // // calculate tcp checksum
+  // tcphdr_2.th_sum = tcp4_checksum(iphdr_2, tcphdr_2);
+
+  // // Fill out ethernet frame header.
+
+  // // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + TCP header)
+  // frame_length = 6 + 6 + 2 + IP4_HDRLEN + TCP_HDRLEN;
+
+  // // Destination and Source MAC addresses
+  // memcpy(ether_frame, dst_mac, 6 * sizeof(uint8_t));
+  // memcpy(ether_frame + 6, src_mac, 6 * sizeof(uint8_t));
+
+  // // Next is ethernet type code (ETH_P_IP for IPv4).
+  // // http://www.iana.org/assignments/ethernet-numbers
+  // ether_frame[12] = ETH_P_IP / 256;
+  // ether_frame[13] = ETH_P_IP % 256;
+
+  // // Next is ethernet frame data (IPv4 header + TCP header).
 
   // // IPv4 header
+  // memcpy(ether_frame + ETH_HDRLEN, &iphdr_2, IP4_HDRLEN * sizeof(uint8_t));
 
-  // // IPv4 header length (4 bits): Number of 32-bit words in header = 5
-  // iphdr_2.ip_hl = IP4_HDRLEN / sizeof(uint32_t);
+  // // TCP header
+  // memcpy(ether_frame + ETH_HDRLEN + IP4_HDRLEN, &tcphdr_2, TCP_HDRLEN * sizeof(uint8_t));
 
-  // // Internet Protocol version (4 bits): IPv4
-  // iphdr_2.ip_v = 4;
-
-  // // Type of service (8 bits)
-  // iphdr_2.ip_tos = 0;
-
-  // // Total length of datagram (16 bits): IP header + TCP header
-  // iphdr_2.ip_len = htons(IP4_HDRLEN + TCP_HDRLEN);
-
-  // // ID sequence number (16 bits): unused, since single datagram
-  // iphdr_2.ip_id = htons(0);
-
-  // // Flags, and Fragmentation offset (3, 13 bits): 0 since single datagram
-
-  // // Zero (1 bit)
-  // ip_flags[0] = 0;
-
-  // // Do not fragment flag (1 bit)
-  // ip_flags[1] = 0;
-
-  // // More fragments following flag (1 bit)
-  // ip_flags[2] = 0;
-
-  // // Fragmentation offset (13 bits)
-  // ip_flags[3] = 0;
-
-  // iphdr_2.ip_off = htons((ip_flags[0] << 15) + (ip_flags[1] << 14) + (ip_flags[2] << 13) + ip_flags[3]);
-
-  // // Time-to-Live (8 bits): default to maximum value
-  // iphdr_2.ip_ttl = 255;
-
-  // // Transport layer protocol (8 bits): 6 for TCP
-  // iphdr_2.ip_p = IPPROTO_TCP;
-
-  // // Source IPv4 address (32 bits)
-  // if ((status = inet_pton(AF_INET, src_ip, &(iphdr_2.ip_src))) != 1)
+  // // Submit request for a raw socket descriptor.
+  // if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
   // {
-  //   fprintf(stdout, "inet_pton() failed for source address.\nError message: %s", strerror(status));
-  //   printf("inet_pton() failed for source address.\nError message: %s", strerror(status));
+  //   perror("socket() failed ");
   //   exit(EXIT_FAILURE);
   // }
 
-  // // Destination IPv4 address (32 bits)
-  // if ((status = inet_pton(AF_INET, dst_ip, &(iphdr_2.ip_dst))) != 1)
+  // // Send ethernet frame to socket.
+  // if ((bytes = sendto(sd, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
   // {
-  //   fprintf(stdout, "inet_pton() failed for destination address.\nError message: %s", strerror(status));
-  //   printf("inet_pton() failed for destination address.\nError message: %s", strerror(status));
+  //   perror("sendto() failed");
   //   exit(EXIT_FAILURE);
   // }
 
-  // calculate checksum for ip header
-  iphdr_2.ip_sum = checksum((uint16_t *)&iphdr_2, IP4_HDRLEN);
-
-  // create second tcp header copied from the first one
-  // overwrite relevant information
-  struct tcphdr tcphdr_2;
-  memcpy(&tcphdr_2, &tcphdr, sizeof(struct tcphdr));
-
-  // // Source port number (16 bits)
-  // tcphdr_2.th_sport = htons(4444);
-
-  tcphdr_2.th_dport = htons(atoi(config->destination_port_tcp_tail_syn)); // set tail syn port
-
-  tcphdr_2.th_seq = htonl(0); // sequence # is 1 because second packet
-
-  // // Acknowledgement number (32 bits): 1 in second packet of SYN/ACK process
-  // tcphdr_2.th_ack = htonl(1);
-
-  // // Reserved (4 bits): should be 0
-  // tcphdr_2.th_x2 = 0;
-
-  // // Data offset (4 bits): size of TCP header in 32-bit words
-  // tcphdr_2.th_off = TCP_HDRLEN / 4;
-
-  // // Flags (8 bits)
-
-  // // FIN flag (1 bit)
-  // tcp_flags[0] = 0;
-
-  // // SYN flag (1 bit): set to 1
-  // tcp_flags[1] = 1;
-
-  // // RST flag (1 bit)
-  // tcp_flags[2] = 0;
-
-  // // PSH flag (1 bit)
-  // tcp_flags[3] = 0;
-
-  // // ACK flag (1 bit)
-  // tcp_flags[4] = 0;
-
-  // // URG flag (1 bit)
-  // tcp_flags[5] = 0;
-
-  // // ECE flag (1 bit)
-  // tcp_flags[6] = 0;
-
-  // // CWR flag (1 bit)
-  // tcp_flags[7] = 0;
-
-  // tcphdr_2.th_flags = 0;
-  // for (i = 0; i < 8; i++)
-  // {
-  //   tcphdr_2.th_flags += (tcp_flags[i] << i);
-  // }
-
-  // // Window size (16 bits)
-  // tcphdr_2.th_win = htons(65535);
-
-  // // Urgent pointer (16 bits): 0 (only valid if URG flag is set)
-  // tcphdr_2.th_urp = htons(0);
-
-  // calculate tcp checksum
-  tcphdr_2.th_sum = tcp4_checksum(iphdr_2, tcphdr_2);
-
-  // Fill out ethernet frame header.
-
-  // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + TCP header)
-  frame_length = 6 + 6 + 2 + IP4_HDRLEN + TCP_HDRLEN;
-
-  // Destination and Source MAC addresses
-  memcpy(ether_frame, dst_mac, 6 * sizeof(uint8_t));
-  memcpy(ether_frame + 6, src_mac, 6 * sizeof(uint8_t));
-
-  // Next is ethernet type code (ETH_P_IP for IPv4).
-  // http://www.iana.org/assignments/ethernet-numbers
-  ether_frame[12] = ETH_P_IP / 256;
-  ether_frame[13] = ETH_P_IP % 256;
-
-  // Next is ethernet frame data (IPv4 header + TCP header).
-
-  // IPv4 header
-  memcpy(ether_frame + ETH_HDRLEN, &iphdr_2, IP4_HDRLEN * sizeof(uint8_t));
-
-  // TCP header
-  memcpy(ether_frame + ETH_HDRLEN + IP4_HDRLEN, &tcphdr_2, TCP_HDRLEN * sizeof(uint8_t));
-
-  // Submit request for a raw socket descriptor.
-  if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
-  {
-    perror("socket() failed ");
-    exit(EXIT_FAILURE);
-  }
-
-  // Send ethernet frame to socket.
-  if ((bytes = sendto(sd, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
-  {
-    perror("sendto() failed");
-    exit(EXIT_FAILURE);
-  }
-
-  // Close socket descriptor.
-  close(sd);
+  // // Close socket descriptor.
+  // close(sd);
 
   // Free allocated memory.
   free(src_mac);
@@ -914,14 +915,19 @@ void main(int argc, char *args[])
   //capture_packets();
   
   // Low entropy data packet train
-  send_packets(0);
+  send_packets(atoi(config->destination_port_tcp_head_syn),0);
+  send_udp_packet_train(0);
+  send_packets(atoi(config->destination_port_tcp_tail_syn),0);
+  send_packets(atoi(config->destination_port_tcp_head_syn),0);
+  send_udp_packet_train(1);
+  send_packets(atoi(config->destination_port_tcp_tail_syn),0);
   // if(getpid()== main_pid){
   //   printf("Sleep for %d seconds\n", config->inter_measurement_time);
     
   //   sleep(config->inter_measurement_time);
     
   //   // High entropy data packet train
-    send_packets(1);
+    // send_packets(1);
   // } else{
   //   printf("Terminating Program.\n");
   // }
