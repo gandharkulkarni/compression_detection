@@ -23,9 +23,10 @@
 #include <errno.h> // errno, perror()
 #include <time.h>
 #include <signal.h>
+#include <pthread.h>
 
 // global variables
-clock_t low_start, low_end, high_start, high_end;
+clock_t low_start, low_end, high_start, high_end, total_time, low_diff, high_diff;
 
 int break_loop = 0;
 void stop_packet_capture(int sig)
@@ -394,15 +395,7 @@ void send_udp_packet_train(int entropy_flag)
   printf("Sent %d udp packets\n", i);
   close(udp_sockfd);
 }
-/* Ref : https://www.devdungeon.com/content/using-libpcap-c#pcap-loop*/
-void capture_packets()
-{
-  char *interface;
-  interface = allocate_strmem(40);
 
-  // Interface to receive packet through.
-  strcpy(interface, "enp0s3");
-}
 int send_packets(int tcp_port, int entropy_flag)
 {
   int i, status, frame_length, sd, bytes, *ip_flags, *tcp_flags;
@@ -664,44 +657,6 @@ int send_packets(int tcp_port, int entropy_flag)
     perror("socket() failed ");
     exit(EXIT_FAILURE);
   }
-/*
-  if(process_count==0){
-    process_count++;
-    pid_t child_process = fork();
-    if(child_process==0){
-      printf("Child process created\n");
-      
-      char buffer[4096];
-      bzero(buffer, 4096);
-      int i =0;
-      int rst_count = 0;
-      while(break_loop==0){
-        int n=0;
-        if((n = recv(sd, (char *)buffer, sizeof(buffer),0))<0){
-          printf("Error in recv");
-        }
-        if(i==0 & n>0){
-          alarm(60);
-          signal(SIGALRM, stop_packet_capture);
-        }
-        i++;
-        // Extract Ethernet header, IP header, and TCP header
-        struct ether_header *eth_header = (struct ether_header *)buffer;
-        struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
-        struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + sizeof(struct iphdr));
-        if (tcph->rst && tcph->th_ack) {
-            rst_count++;
-            printf("Received RST # = %d packet at %ld. src :%d dst: %d \n", rst_count, clock(), ntohs(tcph->source), ntohs(tcph->dest));
-        }
-        bzero(buffer, 4096);
-        // } else {
-        //     printf("Received unexpected packet.\n");
-        // }
-      }
-      return EXIT_SUCCESS;
-    }
- }
- */ 
 
   // Send ethernet frame to socket.
   if ((bytes = sendto(sd, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
@@ -712,172 +667,6 @@ int send_packets(int tcp_port, int entropy_flag)
 
   // Close socket descriptor.
   close(sd);
-
-  // send_udp_packet_train(entropy_flag);
-
-  // struct ip iphdr_2; // create second ip packet header
-
-  // // copy data from first ip header, overwrite necessary information
-  // memcpy(&iphdr_2, &iphdr, sizeof(struct ip));
-
-  // // // IPv4 header
-
-  // // // IPv4 header length (4 bits): Number of 32-bit words in header = 5
-  // // iphdr_2.ip_hl = IP4_HDRLEN / sizeof(uint32_t);
-
-  // // // Internet Protocol version (4 bits): IPv4
-  // // iphdr_2.ip_v = 4;
-
-  // // // Type of service (8 bits)
-  // // iphdr_2.ip_tos = 0;
-
-  // // // Total length of datagram (16 bits): IP header + TCP header
-  // // iphdr_2.ip_len = htons(IP4_HDRLEN + TCP_HDRLEN);
-
-  // // // ID sequence number (16 bits): unused, since single datagram
-  // // iphdr_2.ip_id = htons(0);
-
-  // // // Flags, and Fragmentation offset (3, 13 bits): 0 since single datagram
-
-  // // // Zero (1 bit)
-  // // ip_flags[0] = 0;
-
-  // // // Do not fragment flag (1 bit)
-  // // ip_flags[1] = 0;
-
-  // // // More fragments following flag (1 bit)
-  // // ip_flags[2] = 0;
-
-  // // // Fragmentation offset (13 bits)
-  // // ip_flags[3] = 0;
-
-  // // iphdr_2.ip_off = htons((ip_flags[0] << 15) + (ip_flags[1] << 14) + (ip_flags[2] << 13) + ip_flags[3]);
-
-  // // // Time-to-Live (8 bits): default to maximum value
-  // // iphdr_2.ip_ttl = 255;
-
-  // // // Transport layer protocol (8 bits): 6 for TCP
-  // // iphdr_2.ip_p = IPPROTO_TCP;
-
-  // // // Source IPv4 address (32 bits)
-  // // if ((status = inet_pton(AF_INET, src_ip, &(iphdr_2.ip_src))) != 1)
-  // // {
-  // //   fprintf(stdout, "inet_pton() failed for source address.\nError message: %s", strerror(status));
-  // //   printf("inet_pton() failed for source address.\nError message: %s", strerror(status));
-  // //   exit(EXIT_FAILURE);
-  // // }
-
-  // // // Destination IPv4 address (32 bits)
-  // // if ((status = inet_pton(AF_INET, dst_ip, &(iphdr_2.ip_dst))) != 1)
-  // // {
-  // //   fprintf(stdout, "inet_pton() failed for destination address.\nError message: %s", strerror(status));
-  // //   printf("inet_pton() failed for destination address.\nError message: %s", strerror(status));
-  // //   exit(EXIT_FAILURE);
-  // // }
-
-  // // calculate checksum for ip header
-  // iphdr_2.ip_sum = checksum((uint16_t *)&iphdr_2, IP4_HDRLEN);
-
-  // // create second tcp header copied from the first one
-  // // overwrite relevant information
-  // struct tcphdr tcphdr_2;
-  // memcpy(&tcphdr_2, &tcphdr, sizeof(struct tcphdr));
-
-  // // // Source port number (16 bits)
-  // // tcphdr_2.th_sport = htons(4444);
-
-  // tcphdr_2.th_dport = htons(atoi(config->destination_port_tcp_tail_syn)); // set tail syn port
-
-  // tcphdr_2.th_seq = htonl(0); // sequence # is 1 because second packet
-
-  // // // Acknowledgement number (32 bits): 1 in second packet of SYN/ACK process
-  // // tcphdr_2.th_ack = htonl(1);
-
-  // // // Reserved (4 bits): should be 0
-  // // tcphdr_2.th_x2 = 0;
-
-  // // // Data offset (4 bits): size of TCP header in 32-bit words
-  // // tcphdr_2.th_off = TCP_HDRLEN / 4;
-
-  // // // Flags (8 bits)
-
-  // // // FIN flag (1 bit)
-  // // tcp_flags[0] = 0;
-
-  // // // SYN flag (1 bit): set to 1
-  // // tcp_flags[1] = 1;
-
-  // // // RST flag (1 bit)
-  // // tcp_flags[2] = 0;
-
-  // // // PSH flag (1 bit)
-  // // tcp_flags[3] = 0;
-
-  // // // ACK flag (1 bit)
-  // // tcp_flags[4] = 0;
-
-  // // // URG flag (1 bit)
-  // // tcp_flags[5] = 0;
-
-  // // // ECE flag (1 bit)
-  // // tcp_flags[6] = 0;
-
-  // // // CWR flag (1 bit)
-  // // tcp_flags[7] = 0;
-
-  // // tcphdr_2.th_flags = 0;
-  // // for (i = 0; i < 8; i++)
-  // // {
-  // //   tcphdr_2.th_flags += (tcp_flags[i] << i);
-  // // }
-
-  // // // Window size (16 bits)
-  // // tcphdr_2.th_win = htons(65535);
-
-  // // // Urgent pointer (16 bits): 0 (only valid if URG flag is set)
-  // // tcphdr_2.th_urp = htons(0);
-
-  // // calculate tcp checksum
-  // tcphdr_2.th_sum = tcp4_checksum(iphdr_2, tcphdr_2);
-
-  // // Fill out ethernet frame header.
-
-  // // Ethernet frame length = ethernet header (MAC + MAC + ethernet type) + ethernet data (IP header + TCP header)
-  // frame_length = 6 + 6 + 2 + IP4_HDRLEN + TCP_HDRLEN;
-
-  // // Destination and Source MAC addresses
-  // memcpy(ether_frame, dst_mac, 6 * sizeof(uint8_t));
-  // memcpy(ether_frame + 6, src_mac, 6 * sizeof(uint8_t));
-
-  // // Next is ethernet type code (ETH_P_IP for IPv4).
-  // // http://www.iana.org/assignments/ethernet-numbers
-  // ether_frame[12] = ETH_P_IP / 256;
-  // ether_frame[13] = ETH_P_IP % 256;
-
-  // // Next is ethernet frame data (IPv4 header + TCP header).
-
-  // // IPv4 header
-  // memcpy(ether_frame + ETH_HDRLEN, &iphdr_2, IP4_HDRLEN * sizeof(uint8_t));
-
-  // // TCP header
-  // memcpy(ether_frame + ETH_HDRLEN + IP4_HDRLEN, &tcphdr_2, TCP_HDRLEN * sizeof(uint8_t));
-
-  // // Submit request for a raw socket descriptor.
-  // if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
-  // {
-  //   perror("socket() failed ");
-  //   exit(EXIT_FAILURE);
-  // }
-
-  // // Send ethernet frame to socket.
-  // if ((bytes = sendto(sd, ether_frame, frame_length, 0, (struct sockaddr *)&device, sizeof(device))) <= 0)
-  // {
-  //   perror("sendto() failed");
-  //   exit(EXIT_FAILURE);
-  // }
-
-  // // Close socket descriptor.
-  // close(sd);
 
   // Free allocated memory.
   free(src_mac);
@@ -892,6 +681,81 @@ int send_packets(int tcp_port, int entropy_flag)
 
   return (EXIT_SUCCESS);
 }
+void *receive_rst_packet()
+{
+
+  printf("Thread created\n");
+
+  char buffer[4096];
+  bzero(buffer, 4096);
+  int packet_count = 0;
+  int rst_count = 0;
+  int sd;
+  // Create raw socket
+  if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
+      perror("socket() failed ");
+      exit(EXIT_FAILURE);
+  }
+  while (break_loop == 0)
+  {
+    int n = 0;
+    if ((n = recv(sd, (char *)buffer, sizeof(buffer), 0)) < 0)
+    {
+      printf("Error in recv");
+    }
+    if (packet_count == 0 & n > 0)
+    {
+      alarm(60);
+      signal(SIGALRM, stop_packet_capture);
+    }
+    clock_t temp=clock();
+    packet_count++;
+    // Extract Ethernet header, IP header, and TCP header
+    struct ether_header *eth_header = (struct ether_header *)buffer;
+    struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
+    struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + sizeof(struct iphdr));
+    if (tcph->rst && tcph->th_ack)
+    {
+      rst_count++;
+      printf("Received RST # = %d packet at %ld. src : %d dst: %d ip: %d\n", rst_count, clock(), ntohs(tcph->source), ntohs(tcph->dest), (iph->saddr));
+      if(rst_count==1 && ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
+        low_start = temp;
+      }
+      else if(rst_count==2 && ntohs(tcph->source)==atoi(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
+        low_end = temp;
+      }
+      else if(rst_count==3 && ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
+        high_start = temp;
+      }
+      else if(rst_count==4 && ntohs(tcph->source)==atoi(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
+        high_end = temp;
+      }
+    }
+    if(rst_count==4){
+      break;
+    }
+    bzero(buffer, 4096);
+  }
+  if(rst_count==4){
+    total_time = (((double)low_end) - ((double)low_start)) / ((double)CLOCKS_PER_SEC);
+	  low_start = total_time*1000; //convert seconds to milliseconds
+  
+    total_time = (((double)high_end) - ((double)high_start)) / ((double)CLOCKS_PER_SEC);
+	  high_diff = total_time*1000; //convert seconds to milliseconds
+    int threshold = 100;
+    printf("%d",abs(high_diff-low_diff));
+    if(abs(high_diff-low_diff)<=threshold){
+      printf("No compression detected");
+    }
+    else{
+      printf("Compression detected");
+    }
+  }
+  else{
+    printf("Failed to detect due to insufficient information");
+  }
+  pthread_exit(NULL);
+}
 void main(int argc, char *args[])
 {
   if (argc < 2)
@@ -899,7 +763,6 @@ void main(int argc, char *args[])
     printf("Insufficient arguments. Please provide config file.\n");
     return;
   }
-  //int main_pid = getpid();
 
   /*Get config file path from arg*/
   char *config_path = args[1];
@@ -912,12 +775,23 @@ void main(int argc, char *args[])
 
   /*Get config file in a string format*/
   char *json_str = cJSON_Print(json);
-  //capture_packets();
-  
+
+  pthread_t listener_thread;
+
+  if(pthread_create(&listener_thread,NULL, receive_rst_packet, NULL)){
+    printf("Unable to create new thread");
+    exit(EXIT_FAILURE);
+  }
+
   // Low entropy data packet train
   send_packets(atoi(config->destination_port_tcp_head_syn),0);
   send_udp_packet_train(0);
   send_packets(atoi(config->destination_port_tcp_tail_syn),0);
+  
+  //Sleep for IMT time
+  sleep(config->inter_measurement_time);
+
+  // High entropy data packet train
   send_packets(atoi(config->destination_port_tcp_head_syn),0);
   send_udp_packet_train(1);
   send_packets(atoi(config->destination_port_tcp_tail_syn),0);
@@ -933,6 +807,6 @@ void main(int argc, char *args[])
   // }
   // wait for the child process to complete before terminating the program
   //wait(0);
-
+  pthread_exit(NULL);
   return;
 }
