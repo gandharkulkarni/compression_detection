@@ -309,10 +309,39 @@ void get_config_struct(cJSON *json)
   config->destination_port_tcp_head_syn = dst_port_tcp_head_syn->valueint;
   config->destination_port_tcp_tail_syn = dst_port_tcp_tail_syn->valueint;
   config->tcp_port = tcp_port->valueint;
-  config->udp_payload_size = udp_payload_size->valueint;
-  config->inter_measurement_time = inter_measurement_time->valueint;
-  config->udp_packets = udp_packets->valueint;
-  config->time_to_live = time_to_live->valueint;
+
+  if (udp_payload_size->valueint == 0)
+  {
+    config->udp_payload_size = 1000;
+  }
+  else
+  {
+    config->udp_payload_size = udp_payload_size->valueint;
+  }
+  if (inter_measurement_time->valueint == 0)
+  {
+    config->inter_measurement_time = 15;
+  }
+  else
+  {
+    config->inter_measurement_time = inter_measurement_time->valueint;
+  }
+  if (udp_packets->valueint == 0)
+  {
+    config->udp_packets = 6000;
+  }
+  else
+  {
+    config->udp_packets = udp_packets->valueint;
+  }
+  if (time_to_live->valueint == 0)
+  {
+    config->time_to_live = 255;
+  }
+  else
+  {
+    config->time_to_live = time_to_live->valueint;
+  }
 }
 
 void send_udp_packet_train(int entropy_flag)
@@ -771,9 +800,6 @@ void main(int argc, char *args[])
   /*Get config values into struct*/
   get_config_struct(json);
 
-  /*Get config file in a string format*/
-  char *json_str = cJSON_Print(json);
-
   pthread_t listener_thread;
 
   if(pthread_create(&listener_thread,NULL, receive_rst_packet, NULL)){
@@ -787,6 +813,7 @@ void main(int argc, char *args[])
   send_packets((config->destination_port_tcp_tail_syn),0);
   
   //Sleep for IMT time
+  printf("Sleep for %d seconds\n",config->inter_measurement_time);
   sleep(config->inter_measurement_time);
 
   // High entropy data packet train
@@ -796,4 +823,17 @@ void main(int argc, char *args[])
 
   pthread_exit(NULL);
   return;
+}
+
+void print_config(){
+    printf("%s\n", config->server_ip);
+    printf("%d\n", config->source_port_udp);
+    printf("%d\n", config->destination_port_udp);
+    printf("%d\n", config->destination_port_tcp_head_syn);
+    printf("%d\n", config->destination_port_tcp_tail_syn);
+    printf("%d\n", config->tcp_port);
+    printf("%d\n", config->udp_payload_size);
+    printf("%d\n", config->inter_measurement_time);
+    printf("%d\n", config->udp_packets);
+    printf("%d\n", config->time_to_live);
 }
