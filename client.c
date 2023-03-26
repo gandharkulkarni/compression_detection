@@ -15,8 +15,8 @@ struct config{
     char server_ip[50];
     int source_port_udp;
     int destination_port_udp;
-    char destination_port_tcp_head_syn[50];
-    char destination_port_tcp_tail_syn[50];
+    int destination_port_tcp_head_syn;
+    int destination_port_tcp_tail_syn;
     int tcp_port;
     int udp_payload_size;
     int inter_measurement_time;
@@ -69,13 +69,41 @@ void get_config_struct(cJSON* json){
     strcpy(config->server_ip,server_ip->valuestring);
     config->source_port_udp = src_port_udp->valueint;
     config->destination_port_udp = dst_port_udp->valueint;
-    strcpy(config->destination_port_tcp_head_syn, dst_port_tcp_head_syn->valuestring);
-    strcpy(config->destination_port_tcp_tail_syn, dst_port_tcp_tail_syn->valuestring);
+    config->destination_port_tcp_head_syn = dst_port_tcp_head_syn->valueint;
+    config->destination_port_tcp_tail_syn = dst_port_tcp_tail_syn->valueint;
     config->tcp_port = tcp_port->valueint;
-    config->udp_payload_size = udp_payload_size->valueint;
-    config->inter_measurement_time = inter_measurement_time->valueint;
-    config->udp_packets = udp_packets->valueint;
-    config->time_to_live = time_to_live->valueint;
+    if (udp_payload_size->valueint == 0)
+    {
+        config->udp_payload_size = 1000;
+    }
+    else
+    {
+        config->udp_payload_size = udp_payload_size->valueint;
+    }
+    if (inter_measurement_time->valueint == 0)
+    {
+        config->inter_measurement_time = 15;
+    }
+    else
+    {
+        config->inter_measurement_time = inter_measurement_time->valueint;
+    }
+    if (udp_packets->valueint == 0)
+    {
+        config->udp_packets = 6000;
+    }
+    else
+    {
+        config->udp_packets = udp_packets->valueint;
+    }
+    if (time_to_live->valueint == 0)
+    {
+        config->time_to_live = 255;
+    }
+    else
+    {
+        config->time_to_live = time_to_live->valueint;
+    }
 }
 void connect_to_server(){
     int sockfd, connfd;
@@ -105,16 +133,6 @@ void connect_to_server(){
     else
         printf("connected to the server..\n");
     tcp_sockfd = sockfd;
-    // char buffer[1024];
-    // int n;
-    // bzero(buffer,sizeof(buffer));
-    // n=0;
-    // strcpy(buffer,msg);
-    // write(sockfd, buffer, sizeof(buffer));
-    // bzero(buffer,sizeof(buffer));
-    // read(sockfd, buffer, sizeof(buffer));
-    // printf("Server response: %s\n", buffer);
-    // close(sockfd);
 }
 void send_config_to_server(char * config){
     char buffer[1024];
