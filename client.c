@@ -262,7 +262,7 @@ void main(int argc, char *args[]){
     
     send_udp_packets_to_server();
 
-    sleep(7);
+    sleep(2);
     connect_to_server();
     get_test_results_from_server();
     close_tcp_connection();
@@ -272,8 +272,8 @@ void print_config(){
     printf("%s\n", config->server_ip);
     printf("%d\n", config->source_port_udp);
     printf("%d\n", config->destination_port_udp);
-    printf("%s\n", config->destination_port_tcp_head_syn);
-    printf("%s\n", config->destination_port_tcp_tail_syn);
+    printf("%d\n", config->destination_port_tcp_head_syn);
+    printf("%d\n", config->destination_port_tcp_tail_syn);
     printf("%d\n", config->tcp_port);
     printf("%d\n", config->udp_payload_size);
     printf("%d\n", config->inter_measurement_time);
