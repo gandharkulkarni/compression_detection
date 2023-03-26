@@ -714,10 +714,12 @@ void *receive_rst_packet()
     struct ether_header *eth_header = (struct ether_header *)buffer;
     struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
     struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + sizeof(struct iphdr));
-    if (tcph->rst && tcph->th_ack)
+    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest)==4444 && (ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) || ntohs(tcph->source)==atoi(config->destination_port_tcp_tail_syn)))
     {
       rst_count++;
-      printf("Received RST # = %d packet at %ld. src : %d dst: %d ip: %d\n", rst_count, clock(), ntohs(tcph->source), ntohs(tcph->dest), (iph->saddr));
+      char src[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET,&iph->saddr,src, INET_ADDRSTRLEN);
+      printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
       if(rst_count==1 && ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
         low_start = temp;
       }
@@ -738,12 +740,12 @@ void *receive_rst_packet()
   }
   if(rst_count==4){
     total_time = (((double)low_end) - ((double)low_start)) / ((double)CLOCKS_PER_SEC);
-	  low_start = total_time*1000; //convert seconds to milliseconds
+	  low_diff = total_time*1000; //convert seconds to milliseconds
   
     total_time = (((double)high_end) - ((double)high_start)) / ((double)CLOCKS_PER_SEC);
 	  high_diff = total_time*1000; //convert seconds to milliseconds
     int threshold = 100;
-    printf("%d",abs(high_diff-low_diff));
+    printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
     if(abs(high_diff-low_diff)<=threshold){
       printf("No compression detected");
     }
