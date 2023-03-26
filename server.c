@@ -32,8 +32,8 @@ void print_config()
     printf("\n{\nServer IP : %s\n", config->server_ip);
     printf("Source port UDP : %d\n", config->source_port_udp);
     printf("Destination port UDP : %d\n", config->destination_port_udp);
-    printf("Destination port TCP Head SYN : %s\n", config->destination_port_tcp_head_syn);
-    printf("Destination port TCP Tail SYN : %s\n", config->destination_port_tcp_tail_syn);
+    printf("Destination port TCP Head SYN : %d\n", config->destination_port_tcp_head_syn);
+    printf("Destination port TCP Tail SYN : %d\n", config->destination_port_tcp_tail_syn);
     printf("TCP Port : %d\n", config->tcp_port);
     printf("UDP Payload size : %d\n", config->udp_payload_size);
     printf("Inter measurement time : %d\n", config->inter_measurement_time);
