@@ -739,11 +739,10 @@ void *receive_rst_packet()
     bzero(buffer, 4096);
   }
   if(rst_count==4){
-    total_time = (((double)low_end) - ((double)low_start)) / ((double)CLOCKS_PER_SEC);
-	  low_diff = total_time*1000; //convert seconds to milliseconds
+    low_diff = (((double)low_end) - ((double)low_start)) *1000 / ((double)CLOCKS_PER_SEC);
   
-    total_time = (((double)high_end) - ((double)high_start)) / ((double)CLOCKS_PER_SEC);
-	  high_diff = total_time*1000; //convert seconds to milliseconds
+    high_diff = (((double)high_end) - ((double)high_start)) *1000 / ((double)CLOCKS_PER_SEC);
+
     int threshold = 100;
     printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
     if(abs(high_diff-low_diff)<=threshold){
