@@ -3,8 +3,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h> // close()
-#include <string.h> // strcpy, memset(), and memcpy()
+#include <unistd.h>          // close()
+#include <string.h>          // strcpy, memset(), and memcpy()
 
 #include <netdb.h>           // struct addrinfo
 #include <sys/types.h>       // needed for socket(), uint8_t, uint16_t, uint32_t
@@ -20,7 +20,7 @@
 #include <linux/if_ether.h>  // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
 #include <linux/if_packet.h> // struct sockaddr_ll (see man 7 packet)
 #include <net/ethernet.h>
-#include <errno.h> // errno, perror()
+#include <errno.h>           // errno, perror()
 #include <time.h>
 #include <signal.h>
 #include <pthread.h>
@@ -252,8 +252,8 @@ struct config
   char server_ip[50];
   int source_port_udp;
   int destination_port_udp;
-  char destination_port_tcp_head_syn[50];
-  char destination_port_tcp_tail_syn[50];
+  int destination_port_tcp_head_syn;
+  int destination_port_tcp_tail_syn;
   int tcp_port;
   int udp_payload_size;
   int inter_measurement_time;
@@ -306,8 +306,8 @@ void get_config_struct(cJSON *json)
   strcpy(config->server_ip, server_ip->valuestring);
   config->source_port_udp = src_port_udp->valueint;
   config->destination_port_udp = dst_port_udp->valueint;
-  strcpy(config->destination_port_tcp_head_syn, dst_port_tcp_head_syn->valuestring);
-  strcpy(config->destination_port_tcp_tail_syn, dst_port_tcp_tail_syn->valuestring);
+  config->destination_port_tcp_head_syn = dst_port_tcp_head_syn->valueint;
+  config->destination_port_tcp_tail_syn = dst_port_tcp_tail_syn->valueint;
   config->tcp_port = tcp_port->valueint;
   config->udp_payload_size = udp_payload_size->valueint;
   config->inter_measurement_time = inter_measurement_time->valueint;
@@ -565,14 +565,11 @@ int send_packets(int tcp_port, int entropy_flag)
   iphdr.ip_sum = checksum((uint16_t *)&iphdr, IP4_HDRLEN);
 
   // TCP header
-  // //set everything in tcphdr to 0
-  // memset(&tcphdr, 0, sizeof(tcphdr));
 
   // Source port number (16 bits)
   tcphdr.th_sport = htons(4444);
 
   // Head Syn Destination port number (16 bits)
-  // tcphdr.th_dport = htons(atoi(config->destination_port_tcp_head_syn));
   tcphdr.th_dport = htons(tcp_port);
 
   // Sequence number (32 bits)
@@ -714,22 +711,22 @@ void *receive_rst_packet()
     struct ether_header *eth_header = (struct ether_header *)buffer;
     struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
     struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + sizeof(struct iphdr));
-    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest)==4444 && (ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) || ntohs(tcph->source)==atoi(config->destination_port_tcp_tail_syn)))
+    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest)==4444 && (ntohs(tcph->source)==(config->destination_port_tcp_head_syn) || ntohs(tcph->source)==(config->destination_port_tcp_tail_syn)))
     {
       rst_count++;
       char src[INET_ADDRSTRLEN];
       inet_ntop(AF_INET,&iph->saddr,src, INET_ADDRSTRLEN);
       printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
-      if(rst_count==1 && ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
+      if(rst_count==1 && ntohs(tcph->source)==(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
         low_start = temp;
       }
-      else if(rst_count==2 && ntohs(tcph->source)==atoi(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
+      else if(rst_count==2 && ntohs(tcph->source)==(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
         low_end = temp;
       }
-      else if(rst_count==3 && ntohs(tcph->source)==atoi(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
+      else if(rst_count==3 && ntohs(tcph->source)==(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
         high_start = temp;
       }
-      else if(rst_count==4 && ntohs(tcph->source)==atoi(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
+      else if(rst_count==4 && ntohs(tcph->source)==(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
         high_end = temp;
       }
     }
@@ -746,14 +743,14 @@ void *receive_rst_packet()
     int threshold = 100;
     printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
     if(abs(high_diff-low_diff)<=threshold){
-      printf("No compression detected");
+      printf("No compression detected\n");
     }
     else{
-      printf("Compression detected");
+      printf("Compression detected\n");
     }
   }
   else{
-    printf("Failed to detect due to insufficient information");
+    printf("Failed to detect due to insufficient information\n");
   }
   pthread_exit(NULL);
 }
@@ -785,29 +782,18 @@ void main(int argc, char *args[])
   }
 
   // Low entropy data packet train
-  send_packets(atoi(config->destination_port_tcp_head_syn),0);
+  send_packets((config->destination_port_tcp_head_syn),0);
   send_udp_packet_train(0);
-  send_packets(atoi(config->destination_port_tcp_tail_syn),0);
+  send_packets((config->destination_port_tcp_tail_syn),0);
   
   //Sleep for IMT time
   sleep(config->inter_measurement_time);
 
   // High entropy data packet train
-  send_packets(atoi(config->destination_port_tcp_head_syn),0);
+  send_packets((config->destination_port_tcp_head_syn),0);
   send_udp_packet_train(1);
-  send_packets(atoi(config->destination_port_tcp_tail_syn),0);
-  // if(getpid()== main_pid){
-  //   printf("Sleep for %d seconds\n", config->inter_measurement_time);
-    
-  //   sleep(config->inter_measurement_time);
-    
-  //   // High entropy data packet train
-    // send_packets(1);
-  // } else{
-  //   printf("Terminating Program.\n");
-  // }
-  // wait for the child process to complete before terminating the program
-  //wait(0);
+  send_packets((config->destination_port_tcp_tail_syn),0);
+
   pthread_exit(NULL);
   return;
 }
