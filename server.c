@@ -127,7 +127,7 @@ void initialize_config(int connfd)
 float receive_packets_from_client()
 {
     int sockfd;
-    char buffer[config->udp_payload_size];
+    unsigned char buffer[config->udp_payload_size];
     struct sockaddr_in servaddr, cliaddr;
     memset(buffer, 0, config->udp_payload_size);
 
@@ -167,6 +167,8 @@ float receive_packets_from_client()
     while(i < config->udp_packets && break_loop == 0)
     {
         n = recvfrom(sockfd, (char *)buffer, sizeof(buffer),MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
+        int id = (buffer[0] << 8  | buffer[1]);
+        //printf("%d\t", id);
         if (i == 0 && n > 0)
         {
             low_entr_start_time = clock();
@@ -177,12 +179,10 @@ float receive_packets_from_client()
         if(i>0 && n>0){
             low_entr_end_time = clock();
         }
-        if(i%1000==0){
-                printf("Received %d packets. Code : %d\n", i, n);
-        }
         i++;
         //printf("Received low entropy packets. Count : %d \n", i);
     }
+    printf("Received %d packets.\n", i);
     //calculate time elapsed in seconds
 	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	low_entr_time = total_time*1000; //convert seconds to milliseconds
@@ -194,9 +194,9 @@ float receive_packets_from_client()
     break_loop=0;
     while(i < config->udp_packets && break_loop == 0)
     {
-        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer),
-                     MSG_WAITALL, (struct sockaddr *)&cliaddr,
-                     &len);
+        n = recvfrom(sockfd, (char *)buffer, sizeof(buffer), MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
+        int id = (buffer[0] << 8  | buffer[1]);
+        //printf("%d\t", id);
         if (i == 0 && n > 0)
         {
             high_entr_start_time = clock();
@@ -207,14 +207,11 @@ float receive_packets_from_client()
         if(i>0 && n>0){
             high_entr_end_time = clock();
         }
-        if(i%1000==0){
-                printf("Received %d packets. Code : %d\n", i, n);
-        }
         i++;
         //printf("%ld",high_entr_end_time);
         //printf("Received high entropy packets. Count : %d \n", i);
     }
-
+    printf("Received %d packets.\n", i);
     total_time = (((double)high_entr_end_time) - ((double)high_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	high_entr_time = total_time*1000; //convert seconds to milliseconds
     printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
