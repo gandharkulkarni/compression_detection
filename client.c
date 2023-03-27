@@ -151,7 +151,7 @@ void get_test_results_from_server(){
 }
 void send_udp_packets_to_server(){
     int sockfd;
-    char buffer[config->udp_payload_size];
+    unsigned char buffer[config->udp_payload_size];
     struct sockaddr_in servaddr, cliaddr;
     memset(buffer, 0, config->udp_payload_size);
     float threshold = 100;
@@ -199,10 +199,8 @@ void send_udp_packets_to_server(){
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
-            if(i%1000==0){
-                printf("Sent %d packets. Code : %d\n", i, n);
-            }
     }
+    printf("Sent %d packets.\n", i);
     printf("Low entropy UDP packets sent.\n\n");
 
 	printf("Waiting for %d seconds between tests.\n\n", config->inter_measurement_time);
@@ -232,10 +230,9 @@ void send_udp_packets_to_server(){
         int n = sendto(sockfd, (char *)buffer, sizeof(buffer),
             MSG_CONFIRM, (const struct sockaddr *) &servaddr,
             sizeof(servaddr));
-            if(i%1000==0){
-                printf("Sent %d packets. Code : %d\n", i, n);
-            }
     }
+    printf("Sent %d packets.\n", i);
+    
     close(sockfd);
 }
 void main(int argc, char *args[]){
