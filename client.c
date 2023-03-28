@@ -183,6 +183,7 @@ send_udp_packets_to_server(){
     
     cliaddr.sin_family = AF_INET;
     cliaddr.sin_port = htons(config->source_port_udp);
+    cliaddr.sin_addr.s_addr = inet_addr(config->client_ip);
 
     /* Bind socket */
     if(bind(sockfd, (struct sockaddr *) &cliaddr, sizeof(cliaddr)) < 0){
