@@ -12,6 +12,7 @@
 #define SA struct sockaddr
 int tcp_sockfd, udp_sockfd;
 struct config{
+    char client_ip[50];
     char server_ip[50];
     int source_port_udp;
     int destination_port_udp;
@@ -41,6 +42,7 @@ void close_tcp_connection(){
     close(tcp_sockfd);
 }
 void get_config_struct(cJSON* json){
+    const cJSON *client_ip = NULL;
     const cJSON *server_ip = NULL;
     const cJSON *src_port_udp = NULL;
     const cJSON *dst_port_udp = NULL;
@@ -53,6 +55,7 @@ void get_config_struct(cJSON* json){
     const cJSON *time_to_live = NULL;
 
     /* Parse config fields */
+    client_ip = cJSON_GetObjectItemCaseSensitive(json, "client_ip");
     server_ip =  cJSON_GetObjectItemCaseSensitive(json, "server_ip");
     src_port_udp =  cJSON_GetObjectItemCaseSensitive(json, "source_port_udp");
     dst_port_udp =  cJSON_GetObjectItemCaseSensitive(json, "destination_port_udp");
@@ -66,6 +69,7 @@ void get_config_struct(cJSON* json){
 
     /* Create config struct */
     config = malloc(sizeof *config);
+    strcpy(config->client_ip, client_ip->valuestring);
     strcpy(config->server_ip,server_ip->valuestring);
     config->source_port_udp = src_port_udp->valueint;
     config->destination_port_udp = dst_port_udp->valueint;
@@ -266,6 +270,7 @@ void main(int argc, char *args[]){
 
 }
 void print_config(){
+    printf("%s\n", config->client_ip);
     printf("%s\n", config->server_ip);
     printf("%d\n", config->source_port_udp);
     printf("%d\n", config->destination_port_udp);

@@ -15,6 +15,7 @@ int break_loop = 0;
 int tcp_sockfd, udp_sockfd;
 struct config
 {
+    char client_ip[50];
     char server_ip[50];
     int source_port_udp;
     int destination_port_udp;
@@ -29,7 +30,8 @@ struct config
 struct config *config;
 void print_config()
 {
-    printf("\n{\nServer IP : %s\n", config->server_ip);
+    printf("\n{\nClient IP : %s\n", config->client_ip);
+    printf("Server IP : %s\n", config->server_ip);
     printf("Source port UDP : %d\n", config->source_port_udp);
     printf("Destination port UDP : %d\n", config->destination_port_udp);
     printf("Destination port TCP Head SYN : %d\n", config->destination_port_tcp_head_syn);
@@ -60,6 +62,7 @@ void initialize_config(int connfd)
 
     /* Get cJSON object from received string */
     cJSON *json = cJSON_Parse(output);
+    const cJSON *client_ip = NULL;
     const cJSON *server_ip = NULL;
     const cJSON *src_port_udp = NULL;
     const cJSON *dst_port_udp = NULL;
@@ -72,6 +75,7 @@ void initialize_config(int connfd)
     const cJSON *time_to_live = NULL;
 
     /*Parse config fields*/
+    client_ip = cJSON_GetObjectItemCaseSensitive(json, "client_ip");
     server_ip = cJSON_GetObjectItemCaseSensitive(json, "server_ip");
     src_port_udp = cJSON_GetObjectItemCaseSensitive(json, "source_port_udp");
     dst_port_udp = cJSON_GetObjectItemCaseSensitive(json, "destination_port_udp");
@@ -85,6 +89,7 @@ void initialize_config(int connfd)
 
     /*Create config struct*/
     config = malloc(sizeof *config);
+    strcpy(config->client_ip, client_ip->valuestring);
     strcpy(config->server_ip, server_ip->valuestring);
     config->source_port_udp = src_port_udp->valueint;
     config->destination_port_udp = dst_port_udp->valueint;
