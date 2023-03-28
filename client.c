@@ -1,3 +1,6 @@
+/*
+Author : Gandhar Kulkarni
+*/
 #include"cJSON.h"
 #include"cJSON.c"
 #include<stdio.h>
@@ -38,10 +41,12 @@ struct cJSON *read_config(char* path){
     fclose(fp);
     return json;
 }
-void close_tcp_connection(){
+void 
+close_tcp_connection(){
     close(tcp_sockfd);
 }
-void get_config_struct(cJSON* json){
+void 
+get_config_struct(cJSON* json){
     const cJSON *client_ip = NULL;
     const cJSON *server_ip = NULL;
     const cJSON *src_port_udp = NULL;
@@ -109,7 +114,8 @@ void get_config_struct(cJSON* json){
         config->time_to_live = time_to_live->valueint;
     }
 }
-void connect_to_server(){
+void 
+connect_to_server(){
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
  
@@ -138,7 +144,8 @@ void connect_to_server(){
         printf("connected to the server..\n");
     tcp_sockfd = sockfd;
 }
-void send_config_to_server(char * config){
+void 
+send_config_to_server(char * config){
     char buffer[1024];
     bzero(buffer,sizeof(buffer));
     strcpy(buffer,config);
@@ -147,13 +154,15 @@ void send_config_to_server(char * config){
     read(tcp_sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
 }
-void get_test_results_from_server(){
+void 
+get_test_results_from_server(){
     char buffer[1024];
     bzero(buffer,sizeof(buffer));
     read(tcp_sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
 }
-void send_udp_packets_to_server(){
+void 
+send_udp_packets_to_server(){
     int sockfd;
     unsigned char buffer[config->udp_payload_size];
     struct sockaddr_in servaddr, cliaddr;
@@ -175,7 +184,7 @@ void send_udp_packets_to_server(){
     cliaddr.sin_family = AF_INET;
     cliaddr.sin_port = htons(config->source_port_udp);
 
-
+    /* Bind socket */
     if(bind(sockfd, (struct sockaddr *) &cliaddr, sizeof(cliaddr)) < 0){
 		printf("bind failed\n");
 		exit(EXIT_FAILURE);
@@ -211,6 +220,7 @@ void send_udp_packets_to_server(){
 	/* sleep for inter-measurement time */
 	sleep(config->inter_measurement_time);
 
+    /* Read high entropy data from the file */
     FILE* fp;
     fp = fopen("highEntropyData", "r");
     memset(buffer, 0, config->udp_payload_size);
@@ -219,11 +229,6 @@ void send_udp_packets_to_server(){
     
     /* sending udp packet train for high entropy */
     for(i=0; i<config->udp_packets; i++){
-        // buffer[0] = (i >> 8) & 0xFF;
-        // buffer[1] = i & 0xff;
-        // buffer[0] = (unsigned) i & 0xff;
-        // buffer[1] = (unsigned) i>>8;
-
         unsigned int temp = i;
         unsigned char lsb = (unsigned)(temp>> 8) & 0xff; 
         unsigned char msb = (unsigned)temp & 0xff; 
@@ -239,7 +244,8 @@ void send_udp_packets_to_server(){
     
     close(sockfd);
 }
-void main(int argc, char *args[]){
+void 
+main(int argc, char *args[]){
     if(argc<2){
         printf("Insufficient arguments. Please provide config file.\n");
         return;
@@ -260,10 +266,14 @@ void main(int argc, char *args[]){
     connect_to_server();
     send_config_to_server(json_str);
     close_tcp_connection();
-    
+
+    /* Probing phase */
     send_udp_packets_to_server();
 
+    /* Wait for server to initialize TCP connection */
     sleep(2);
+
+    /* Post probing phase */
     connect_to_server();
     get_test_results_from_server();
     close_tcp_connection();

@@ -1,3 +1,6 @@
+/*
+Author : Gandhar Kulkarni
+*/
 #include <stdio.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -29,7 +32,8 @@ struct config
     int time_to_live;
 };
 struct config *config;
-void print_config()
+void 
+print_config()
 {
     printf("\n{\nClient IP : %s\n", config->client_ip);
     printf("Server IP : %s\n", config->server_ip);
@@ -44,18 +48,22 @@ void print_config()
     printf("Time to live : %d\n}\n", config->time_to_live);
 }
 
-void break_deadlock_low_entr(int sig)
+void 
+break_deadlock_low_entr(int sig)
 {
   break_loop_low_entr = 1;
 }
-void break_deadlock_high_entr(int sig)
+void 
+break_deadlock_high_entr(int sig)
 {
   break_loop_high_entr = 1;
 }
-void close_tcp_connection(){
+void 
+close_tcp_connection(){
     close(tcp_sockfd);
 }
-void initialize_config(int connfd)
+void 
+initialize_config(int connfd)
 {
     char buff[4096];
     int n;
@@ -134,7 +142,8 @@ void initialize_config(int connfd)
         config->time_to_live = time_to_live->valueint;
     }
 }
-float receive_packets_from_client()
+float 
+receive_packets_from_client()
 {
     int sockfd;
     unsigned char buffer[config->udp_payload_size];
@@ -177,7 +186,9 @@ float receive_packets_from_client()
     while(i < config->udp_packets && break_loop_low_entr == 0)
     {
         n = recvfrom(sockfd, (char *)buffer, sizeof(buffer),MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
-        //int id = (buffer[0] << 8  | buffer[1]);
+
+        /* retrieve packet id */
+        int id = (buffer[0] << 8  | buffer[1]);
         //printf("%d\t", id);
         if (i == 0 && n > 0)
         {
@@ -190,7 +201,6 @@ float receive_packets_from_client()
             low_entr_end_time = clock();
         }
         i++;
-        //printf("Received low entropy packets. Count : %d \n", i);
     }
     /* All packets received. Disable the alarm */
     if(i == config->udp_packets){
@@ -200,15 +210,16 @@ float receive_packets_from_client()
     //calculate time elapsed in seconds
 	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	low_entr_time = total_time*1000; //convert seconds to milliseconds
-    printf("Low entropy packet train : Size: %d, time :%f\n", i, low_entr_time);
+    //printf("Low entropy packet train : Size: %d, time :%f\n", i, low_entr_time);
     
-
     printf("Receiving...\n");
     i=0;
     while(i < config->udp_packets && break_loop_high_entr == 0)
     {
         n = recvfrom(sockfd, (char *)buffer, sizeof(buffer), MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
-        //int id = (buffer[0] << 8  | buffer[1]);
+
+        /* retrieve packet id */
+        int id = (buffer[0] << 8  | buffer[1]);
         //printf("%d\t", id);
         if (i == 0 && n > 0)
         {
@@ -221,8 +232,6 @@ float receive_packets_from_client()
             high_entr_end_time = clock();
         }
         i++;
-        //printf("%ld",high_entr_end_time);
-        //printf("Received high entropy packets. Count : %d \n", i);
     }
     /* All packets received. Disable the alarm */
     if(i == config->udp_packets){
@@ -231,11 +240,12 @@ float receive_packets_from_client()
     printf("Received %d packets.\n", i);
     total_time = (((double)high_entr_end_time) - ((double)high_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	high_entr_time = total_time*1000; //convert seconds to milliseconds
-    printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
-    printf("Difference: %f\n", abs(high_entr_time-low_entr_time));
+    //printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
+    //printf("Difference: %f\n", abs(high_entr_time-low_entr_time));
     return abs(high_entr_time-low_entr_time);
 }
-int listen_on_port(int tcp_listen_port)
+int 
+listen_on_port(int tcp_listen_port)
 {
     int sockfd, connfd, len;
     struct sockaddr_in servaddr, cli;
@@ -294,7 +304,8 @@ int listen_on_port(int tcp_listen_port)
     tcp_sockfd = sockfd;
     return connfd;
 }
-void main(int argc, char *args[])
+void 
+main(int argc, char *args[])
 {
     if (argc < 2)
     {
