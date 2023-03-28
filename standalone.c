@@ -1,6 +1,6 @@
 /*
 Author : Gandhar Kulkarni
-External Ref : 
+External Ref :
 http://cs621.cs.usfca.edu/v/projects/udp4_cooked.c
 https://www.cs.usfca.edu/vahab/resources/Short%20Tutorial%20on%20Signals%20in%20Linux.html
 https://www.devdungeon.com/content/using-libpcap-c
@@ -10,8 +10,8 @@ https://www.devdungeon.com/content/using-libpcap-c
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>          // close()
-#include <string.h>          // strcpy, memset(), and memcpy()
+#include <unistd.h> // close()
+#include <string.h> // strcpy, memset(), and memcpy()
 
 #include <netdb.h>           // struct addrinfo
 #include <sys/types.h>       // needed for socket(), uint8_t, uint16_t, uint32_t
@@ -27,7 +27,7 @@ https://www.devdungeon.com/content/using-libpcap-c
 #include <linux/if_ether.h>  // ETH_P_IP = 0x0800, ETH_P_IPV6 = 0x86DD
 #include <linux/if_packet.h> // struct sockaddr_ll (see man 7 packet)
 #include <net/ethernet.h>
-#include <errno.h>           // errno, perror()
+#include <errno.h> // errno, perror()
 #include <time.h>
 #include <signal.h>
 #include <pthread.h>
@@ -36,9 +36,10 @@ https://www.devdungeon.com/content/using-libpcap-c
 clock_t low_start, low_end, high_start, high_end, total_time, low_diff, high_diff;
 
 int break_loop = 0;
-void stop_packet_capture(int sig)
+void 
+stop_packet_capture(int sig)
 {
-  break_loop=1;
+  break_loop = 1;
 }
 
 // Define some constants.
@@ -48,7 +49,8 @@ void stop_packet_capture(int sig)
 
 // Computing the internet checksum (RFC 1071).
 // Note that the internet checksum is not guaranteed to preclude collisions.
-uint16_t checksum(uint16_t *addr, int len)
+uint16_t 
+checksum(uint16_t *addr, int len)
 {
 
   int count = len;
@@ -83,7 +85,8 @@ uint16_t checksum(uint16_t *addr, int len)
 }
 
 // Build IPv4 TCP pseudo-header and call checksum function.
-uint16_t tcp4_checksum(struct ip iphdr, struct tcphdr tcphdr)
+uint16_t 
+tcp4_checksum(struct ip iphdr, struct tcphdr tcphdr)
 {
 
   uint16_t svalue;
@@ -198,7 +201,8 @@ char *allocate_strmem(int len)
 }
 
 // Allocate memory for an array of unsigned chars.
-uint8_t *allocate_ustrmem(int len)
+uint8_t 
+*allocate_ustrmem(int len)
 {
 
   void *tmp;
@@ -223,7 +227,8 @@ uint8_t *allocate_ustrmem(int len)
 }
 
 // Allocate memory for an array of ints.
-int *allocate_intmem(int len)
+int 
+*allocate_intmem(int len)
 {
 
   void *tmp;
@@ -277,7 +282,8 @@ struct cJSON *read_config(char *path)
   return json;
 }
 
-void get_config_struct(cJSON *json)
+void 
+get_config_struct(cJSON *json)
 {
   const cJSON *client_ip = NULL;
   const cJSON *server_ip = NULL;
@@ -348,7 +354,8 @@ void get_config_struct(cJSON *json)
   }
 }
 
-void send_udp_packet_train(int entropy_flag)
+void 
+send_udp_packet_train(int entropy_flag)
 {
 
   // create new sockaddr_in for udp
@@ -429,7 +436,8 @@ void send_udp_packet_train(int entropy_flag)
   close(udp_sockfd);
 }
 
-int send_tcp_syn_packet(int tcp_port, int entropy_flag)
+int 
+send_tcp_syn_packet(int tcp_port, int entropy_flag)
 {
   int i, status, frame_length, sd, bytes, *ip_flags, *tcp_flags;
   char *interface, *target, *src_ip, *dst_ip;
@@ -456,7 +464,7 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
 
   // Interface to send packet through.
   strcpy(interface, "enp0s3");
-  
+
   // Submit request for a socket descriptor to look up interface.
   if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
   {
@@ -707,7 +715,8 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
 
   return (EXIT_SUCCESS);
 }
-void *receive_rst_packet()
+void
+*receive_rst_packet()
 {
 
   char buffer[4096];
@@ -716,9 +725,10 @@ void *receive_rst_packet()
   int rst_count = 0;
   int sd;
   // Create raw socket
-  if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0) {
-      perror("socket() failed ");
-      exit(EXIT_FAILURE);
+  if ((sd = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) < 0)
+  {
+    perror("socket() failed ");
+    exit(EXIT_FAILURE);
   }
   while (break_loop == 0)
   {
@@ -727,56 +737,66 @@ void *receive_rst_packet()
     {
       printf("Error in recv");
     }
-    clock_t temp=clock();
+    clock_t temp = clock();
 
     // Extract Ethernet header, IP header, and TCP header
     struct ether_header *eth_header = (struct ether_header *)buffer;
     struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
     struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + sizeof(struct iphdr));
-    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest)==4444 && (ntohs(tcph->source)==(config->destination_port_tcp_head_syn) || ntohs(tcph->source)==(config->destination_port_tcp_tail_syn)))
+    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest) == 4444 && (ntohs(tcph->source) == (config->destination_port_tcp_head_syn) || ntohs(tcph->source) == (config->destination_port_tcp_tail_syn)))
     {
       rst_count++;
       char src[INET_ADDRSTRLEN];
-      inet_ntop(AF_INET,&iph->saddr,src, INET_ADDRSTRLEN);
-      //printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
-      if(rst_count==1 && ntohs(tcph->source)==(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
+      inet_ntop(AF_INET, &iph->saddr, src, INET_ADDRSTRLEN);
+      // printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
+      if (rst_count == 1 && ntohs(tcph->source) == (config->destination_port_tcp_head_syn) && ntohs(tcph->dest) == 4444)
+      {
         low_start = temp;
       }
-      else if(rst_count==2 && ntohs(tcph->source)==(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
+      else if (rst_count == 2 && ntohs(tcph->source) == (config->destination_port_tcp_tail_syn) && ntohs(tcph->dest) == 4444)
+      {
         low_end = temp;
       }
-      else if(rst_count==3 && ntohs(tcph->source)==(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
+      else if (rst_count == 3 && ntohs(tcph->source) == (config->destination_port_tcp_head_syn) && ntohs(tcph->dest) == 4444)
+      {
         high_start = temp;
       }
-      else if(rst_count==4 && ntohs(tcph->source)==(config->destination_port_tcp_tail_syn) && ntohs(tcph->dest)==4444){
+      else if (rst_count == 4 && ntohs(tcph->source) == (config->destination_port_tcp_tail_syn) && ntohs(tcph->dest) == 4444)
+      {
         high_end = temp;
       }
     }
-    if(rst_count==4){
+    if (rst_count == 4)
+    {
       break;
     }
     bzero(buffer, 4096);
   }
-  if(rst_count==4){
-    low_diff = (((double)low_end) - ((double)low_start)) *1000 / ((double)CLOCKS_PER_SEC);
-  
-    high_diff = (((double)high_end) - ((double)high_start)) *1000 / ((double)CLOCKS_PER_SEC);
+  if (rst_count == 4)
+  {
+    low_diff = (((double)low_end) - ((double)low_start)) * 1000 / ((double)CLOCKS_PER_SEC);
+
+    high_diff = (((double)high_end) - ((double)high_start)) * 1000 / ((double)CLOCKS_PER_SEC);
 
     int threshold = 100;
-    //printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
-    if(abs(high_diff-low_diff)<=threshold){
+    // printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
+    if (abs(high_diff - low_diff) <= threshold)
+    {
       printf("No compression detected\n");
     }
-    else{
+    else
+    {
       printf("Compression detected\n");
     }
   }
-  else{
+  else
+  {
     printf("Failed to detect due to insufficient information\n");
   }
   pthread_exit(NULL);
 }
-void main(int argc, char *args[])
+void 
+main(int argc, char *args[])
 {
   if (argc < 2)
   {
@@ -795,43 +815,44 @@ void main(int argc, char *args[])
 
   pthread_t listener_thread;
 
-  if(pthread_create(&listener_thread,NULL, receive_rst_packet, NULL)){
+  if (pthread_create(&listener_thread, NULL, receive_rst_packet, NULL))
+  {
     printf("Unable to create new thread");
     exit(EXIT_FAILURE);
   }
 
   // Low entropy data packet train
-  send_tcp_syn_packet((config->destination_port_tcp_head_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_head_syn), 0);
   /* Start the timer after 1st TCP Syn Head */
   alarm(60);
   signal(SIGALRM, stop_packet_capture);
 
-
   send_udp_packet_train(0);
-  send_tcp_syn_packet((config->destination_port_tcp_tail_syn),0);
-  
-  //Sleep for IMT time
-  printf("Sleep for %d seconds\n",config->inter_measurement_time);
+  send_tcp_syn_packet((config->destination_port_tcp_tail_syn), 0);
+
+  // Sleep for IMT time
+  printf("Sleep for %d seconds\n", config->inter_measurement_time);
   sleep(config->inter_measurement_time);
 
   // High entropy data packet train
-  send_tcp_syn_packet((config->destination_port_tcp_head_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_head_syn), 0);
   send_udp_packet_train(1);
-  send_tcp_syn_packet((config->destination_port_tcp_tail_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_tail_syn), 0);
 
   pthread_exit(NULL);
   return;
 }
 
-void print_config(){
-    printf("%s\n", config->server_ip);
-    printf("%d\n", config->source_port_udp);
-    printf("%d\n", config->destination_port_udp);
-    printf("%d\n", config->destination_port_tcp_head_syn);
-    printf("%d\n", config->destination_port_tcp_tail_syn);
-    printf("%d\n", config->tcp_port);
-    printf("%d\n", config->udp_payload_size);
-    printf("%d\n", config->inter_measurement_time);
-    printf("%d\n", config->udp_packets);
-    printf("%d\n", config->time_to_live);
+void print_config()
+{
+  printf("%s\n", config->server_ip);
+  printf("%d\n", config->source_port_udp);
+  printf("%d\n", config->destination_port_udp);
+  printf("%d\n", config->destination_port_tcp_head_syn);
+  printf("%d\n", config->destination_port_tcp_tail_syn);
+  printf("%d\n", config->tcp_port);
+  printf("%d\n", config->udp_payload_size);
+  printf("%d\n", config->inter_measurement_time);
+  printf("%d\n", config->udp_packets);
+  printf("%d\n", config->time_to_live);
 }
