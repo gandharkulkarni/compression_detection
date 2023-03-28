@@ -14,6 +14,10 @@ Author : Gandhar Kulkarni
 #include<arpa/inet.h>
 #define SA struct sockaddr
 int tcp_sockfd, udp_sockfd;
+
+/**
+ * Struct to store config details
+*/
 struct config{
     char client_ip[50];
     char server_ip[50];
@@ -28,6 +32,11 @@ struct config{
     int time_to_live;
 };
 struct config* config;
+
+/** Reads config file
+ * @param Path path to config file
+ * @return struct cJSON 
+*/
 struct cJSON *read_config(char* path){
     FILE* fp;
     char buffer[1024];
@@ -41,10 +50,14 @@ struct cJSON *read_config(char* path){
     fclose(fp);
     return json;
 }
+
+/** Closes tcp connection */
 void 
 close_tcp_connection(){
     close(tcp_sockfd);
 }
+
+/** Initailizes config struct */
 void 
 get_config_struct(cJSON* json){
     const cJSON *client_ip = NULL;
@@ -114,6 +127,8 @@ get_config_struct(cJSON* json){
         config->time_to_live = time_to_live->valueint;
     }
 }
+
+/** Connects to server */
 void 
 connect_to_server(){
     int sockfd, connfd;
@@ -144,6 +159,10 @@ connect_to_server(){
         printf("connected to the server..\n");
     tcp_sockfd = sockfd;
 }
+
+/** Sends config file to server
+ * @param config Config file in string format
+ */
 void 
 send_config_to_server(char * config){
     char buffer[1024];
@@ -154,6 +173,8 @@ send_config_to_server(char * config){
     read(tcp_sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
 }
+
+/** Reads result from server */
 void 
 get_test_results_from_server(){
     char buffer[1024];
@@ -161,6 +182,8 @@ get_test_results_from_server(){
     read(tcp_sockfd, buffer, sizeof(buffer));
     printf("Server response: %s\n", buffer);
 }
+
+/** Sends UDP packet train to server */
 void 
 send_udp_packets_to_server(){
     int sockfd;
@@ -280,6 +303,8 @@ main(int argc, char *args[]){
     close_tcp_connection();
 
 }
+
+/** Prints config details*/
 void print_config(){
     printf("%s\n", config->client_ip);
     printf("%s\n", config->server_ip);
