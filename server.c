@@ -17,6 +17,7 @@ Author : Gandhar Kulkarni
 int break_loop_low_entr = 0;
 int break_loop_high_entr = 0;
 int tcp_sockfd, udp_sockfd;
+/** Struct to store config details */
 struct config
 {
     char client_ip[50];
@@ -32,6 +33,8 @@ struct config
     int time_to_live;
 };
 struct config *config;
+
+/** Prints config details */
 void 
 print_config()
 {
@@ -48,20 +51,27 @@ print_config()
     printf("Time to live : %d\n}\n", config->time_to_live);
 }
 
+/** Break deadlock while listening */
 void 
 break_deadlock_low_entr(int sig)
 {
   break_loop_low_entr = 1;
 }
+
+/** Break deadlock while listening */
 void 
 break_deadlock_high_entr(int sig)
 {
   break_loop_high_entr = 1;
 }
+
+/** Closes TCP connection */
 void 
 close_tcp_connection(){
     close(tcp_sockfd);
 }
+
+/** Initialize config struct with received config */
 void 
 initialize_config(int connfd)
 {
@@ -142,6 +152,10 @@ initialize_config(int connfd)
         config->time_to_live = time_to_live->valueint;
     }
 }
+
+/** Receive UDP packets from client 
+ * @return float Difference in High entropy packet train & Low entropy packet train. (deltaH - deltaT)
+*/
 float 
 receive_packets_from_client()
 {
@@ -162,7 +176,7 @@ receive_packets_from_client()
 
     // Filling server information
     servaddr.sin_family = AF_INET; // IPv4
-    servaddr.sin_addr.s_addr = INADDR_ANY;
+    servaddr.sin_addr.s_addr = inet_addr(config->server_ip);
     servaddr.sin_port = htons(config->destination_port_udp);
 
     cliaddr.sin_family = AF_INET;
@@ -178,7 +192,7 @@ receive_packets_from_client()
     socklen_t len;
     int n;
 
-    len = sizeof(cliaddr); // len is value/result
+    len = sizeof(cliaddr);
     clock_t low_entr_start_time, low_entr_end_time, high_entr_start_time, high_entr_end_time;
 	double total_time, low_entr_time, high_entr_time = 0;
     printf("Receiving...\n");
@@ -244,6 +258,12 @@ receive_packets_from_client()
     //printf("Difference: %f\n", abs(high_entr_time-low_entr_time));
     return abs(high_entr_time-low_entr_time);
 }
+
+/**
+ * Listen on port to accept client
+ * @param tcp_listen_port port number to listen on
+ * @return int socket fd
+*/
 int 
 listen_on_port(int tcp_listen_port)
 {
