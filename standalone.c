@@ -1,3 +1,10 @@
+/*
+Author : Gandhar Kulkarni
+External Ref : 
+http://cs621.cs.usfca.edu/v/projects/udp4_cooked.c
+https://www.cs.usfca.edu/vahab/resources/Short%20Tutorial%20on%20Signals%20in%20Linux.html
+https://www.devdungeon.com/content/using-libpcap-c
+*/
 #include "cJSON.h"
 #include "cJSON.c"
 
@@ -173,7 +180,6 @@ char *allocate_strmem(int len)
 
   if (len <= 0)
   {
-    fprintf(stdout, "ERROR: Cannot allocate memory because len = %i in allocate_strmem().\n", len);
     printf("ERROR: Cannot allocate memory because len = %i in allocate_strmem().\n", len);
     exit(EXIT_FAILURE);
   }
@@ -186,7 +192,6 @@ char *allocate_strmem(int len)
   }
   else
   {
-    fprintf(stdout, "ERROR: Cannot allocate memory for array allocate_strmem().\n");
     printf("ERROR: Cannot allocate memory for array allocate_strmem().\n");
     exit(EXIT_FAILURE);
   }
@@ -200,7 +205,6 @@ uint8_t *allocate_ustrmem(int len)
 
   if (len <= 0)
   {
-    fprintf(stdout, "ERROR: Cannot allocate memory because len = %i in allocate_ustrmem().\n", len);
     printf("ERROR: Cannot allocate memory because len = %i in allocate_ustrmem().\n", len);
     exit(EXIT_FAILURE);
   }
@@ -213,7 +217,6 @@ uint8_t *allocate_ustrmem(int len)
   }
   else
   {
-    fprintf(stdout, "ERROR: Cannot allocate memory for array allocate_ustrmem().\n");
     printf("ERROR: Cannot allocate memory for array allocate_ustrmem().\n");
     exit(EXIT_FAILURE);
   }
@@ -227,7 +230,6 @@ int *allocate_intmem(int len)
 
   if (len <= 0)
   {
-    fprintf(stdout, "ERROR: Cannot allocate memory because len = %i in allocate_intmem().\n", len);
     printf("ERROR: Cannot allocate memory because len = %i in allocate_intmem().\n", len);
     exit(EXIT_FAILURE);
   }
@@ -240,7 +242,6 @@ int *allocate_intmem(int len)
   }
   else
   {
-    fprintf(stdout, "ERROR: Cannot allocate memory for array allocate_intmem().\n");
     printf("ERROR: Cannot allocate memory for array allocate_intmem().\n");
     exit(EXIT_FAILURE);
   }
@@ -517,7 +518,6 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
   // Resolve target using getaddrinfo().
   if ((status = getaddrinfo(target, NULL, &hints, &res)) != 0)
   {
-    fprintf(stdout, "getaddrinfo() failed for target: %s\n", gai_strerror(status));
     printf("getaddrinfo() failed for target: %s\n", gai_strerror(status));
     exit(EXIT_FAILURE);
   }
@@ -526,7 +526,6 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
   if (inet_ntop(AF_INET, tmp, dst_ip, INET_ADDRSTRLEN) == NULL)
   {
     status = errno;
-    fprintf(stdout, "inet_ntop() failed for target.\nError message: %s", strerror(status));
     printf("inet_ntop() failed for target.\nError message: %s", strerror(status));
     exit(EXIT_FAILURE);
   }
@@ -579,7 +578,6 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
   // Source IPv4 address (32 bits)
   if ((status = inet_pton(AF_INET, src_ip, &(iphdr.ip_src))) != 1)
   {
-    fprintf(stdout, "inet_pton() failed for source address.\nError message: %s", strerror(status));
     printf("inet_pton() failed for source address.\nError message: %s", strerror(status));
     exit(EXIT_FAILURE);
   }
@@ -587,7 +585,6 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
   // Destination IPv4 address (32 bits)
   if ((status = inet_pton(AF_INET, dst_ip, &(iphdr.ip_dst))) != 1)
   {
-    fprintf(stdout, "inet_pton() failed for destination address.\nError message: %s", strerror(status));
     printf("inet_pton() failed for destination address.\nError message: %s", strerror(status));
     exit(EXIT_FAILURE);
   }
@@ -713,8 +710,6 @@ int send_tcp_syn_packet(int tcp_port, int entropy_flag)
 void *receive_rst_packet()
 {
 
-  printf("Thread created\n");
-
   char buffer[4096];
   bzero(buffer, 4096);
 
@@ -743,7 +738,7 @@ void *receive_rst_packet()
       rst_count++;
       char src[INET_ADDRSTRLEN];
       inet_ntop(AF_INET,&iph->saddr,src, INET_ADDRSTRLEN);
-      printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
+      //printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
       if(rst_count==1 && ntohs(tcph->source)==(config->destination_port_tcp_head_syn) && ntohs(tcph->dest)==4444){
         low_start = temp;
       }
@@ -768,7 +763,7 @@ void *receive_rst_packet()
     high_diff = (((double)high_end) - ((double)high_start)) *1000 / ((double)CLOCKS_PER_SEC);
 
     int threshold = 100;
-    printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
+    //printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
     if(abs(high_diff-low_diff)<=threshold){
       printf("No compression detected\n");
     }
