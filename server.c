@@ -221,7 +221,7 @@ float receive_packets_from_client()
 	high_entr_time = total_time*1000; //convert seconds to milliseconds
     printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
     printf("Difference: %f\n", high_entr_time-low_entr_time);
-    return high_entr_time-low_entr_time;
+    return abs(high_entr_time-low_entr_time);
 }
 int listen_on_port(int tcp_listen_port)
 {
