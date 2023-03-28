@@ -1,4 +1,5 @@
 {
+    "client_ip": "10.0.0.136",
     "server_ip":"10.0.0.251",
     "source_port_udp":9876,
     "destination_port_udp":8765,
