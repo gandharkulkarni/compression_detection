@@ -11,7 +11,8 @@
 #include <time.h>
 #include <signal.h>
 #define SA struct sockaddr
-int break_loop = 0;
+int break_loop_low_entr = 0;
+int break_loop_high_entr = 0;
 int tcp_sockfd, udp_sockfd;
 struct config
 {
@@ -43,9 +44,13 @@ void print_config()
     printf("Time to live : %d\n}\n", config->time_to_live);
 }
 
-void break_deadlock(int sig)
+void break_deadlock_low_entr(int sig)
 {
-  break_loop = 1;
+  break_loop_low_entr = 1;
+}
+void break_deadlock_high_entr(int sig)
+{
+  break_loop_high_entr = 1;
 }
 void close_tcp_connection(){
     close(tcp_sockfd);
@@ -169,23 +174,27 @@ float receive_packets_from_client()
 	double total_time, low_entr_time, high_entr_time = 0;
     printf("Receiving...\n");
     int i=0;
-    while(i < config->udp_packets && break_loop == 0)
+    while(i < config->udp_packets && break_loop_low_entr == 0)
     {
         n = recvfrom(sockfd, (char *)buffer, sizeof(buffer),MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
-        int id = (buffer[0] << 8  | buffer[1]);
+        //int id = (buffer[0] << 8  | buffer[1]);
         //printf("%d\t", id);
         if (i == 0 && n > 0)
         {
             low_entr_start_time = clock();
             /* break the loop if not all packets are received after 10 seconds */
-            //alarm(10);
-            //signal(SIGALRM, break_deadlock);
+            alarm(10);
+            signal(SIGALRM, break_deadlock_low_entr);
         }
         if(i>0 && n>0){
             low_entr_end_time = clock();
         }
         i++;
         //printf("Received low entropy packets. Count : %d \n", i);
+    }
+    /* All packets received. Disable the alarm */
+    if(i == config->udp_packets){
+        alarm(0);
     }
     printf("Received %d packets.\n", i);
     //calculate time elapsed in seconds
@@ -196,18 +205,17 @@ float receive_packets_from_client()
 
     printf("Receiving...\n");
     i=0;
-    break_loop=0;
-    while(i < config->udp_packets && break_loop == 0)
+    while(i < config->udp_packets && break_loop_high_entr == 0)
     {
         n = recvfrom(sockfd, (char *)buffer, sizeof(buffer), MSG_WAITALL, (struct sockaddr *)&cliaddr, &len);
-        int id = (buffer[0] << 8  | buffer[1]);
+        //int id = (buffer[0] << 8  | buffer[1]);
         //printf("%d\t", id);
         if (i == 0 && n > 0)
         {
             high_entr_start_time = clock();
             /* break the loop if not all packets are received after 10 seconds */
-            //alarm(10); 
-            //signal(SIGALRM, break_deadlock);
+            alarm(10); 
+            signal(SIGALRM, break_deadlock_high_entr);
         }
         if(i>0 && n>0){
             high_entr_end_time = clock();
@@ -216,11 +224,15 @@ float receive_packets_from_client()
         //printf("%ld",high_entr_end_time);
         //printf("Received high entropy packets. Count : %d \n", i);
     }
+    /* All packets received. Disable the alarm */
+    if(i == config->udp_packets){
+        alarm(0);
+    }
     printf("Received %d packets.\n", i);
     total_time = (((double)high_entr_end_time) - ((double)high_entr_start_time)) / ((double)CLOCKS_PER_SEC);
 	high_entr_time = total_time*1000; //convert seconds to milliseconds
     printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
-    printf("Difference: %f\n", high_entr_time-low_entr_time);
+    printf("Difference: %f\n", abs(high_entr_time-low_entr_time));
     return abs(high_entr_time-low_entr_time);
 }
 int listen_on_port(int tcp_listen_port)
@@ -281,11 +293,6 @@ int listen_on_port(int tcp_listen_port)
     
     tcp_sockfd = sockfd;
     return connfd;
-    /* Get config file from client */
-    // get_config_file(connfd);
-    // char *response = "Configuration received";
-    // write(connfd, response, sizeof(response) * strlen(response));
-    // close(sockfd);
 }
 void main(int argc, char *args[])
 {
