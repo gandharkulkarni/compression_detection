@@ -68,7 +68,7 @@ There are three phases in this process.
 
     Post-Probing Phase
     ==================
-    The client sleeps for 5 seconds before server completes the computation and initiates a TCP socket and associates it with a port.
+    The client sleeps for 2 seconds before server completes the computation and initiates a TCP socket and associates it with a port. (If server computation is not completed, may have to increase the sleep interval)
     The client then establishes a connection with the server, who, after accepting the connection from the client, shares the finding about network compression 
     back to the client. The client displays the results of the investigation (whether network compression was detected or not) and connection is terminated.
 
@@ -97,4 +97,18 @@ The thread process calculates the time between the arrival of each RST packet. T
 If a timeout occurs due to a delay or absence of an RST packet from the server, the application terminates due to insufficient information.
 
 The difference between these times is compared to the 100ms threshold, and the outcome is displayed. Finally, the program terminates.
+    
+    **Note: If you face error 'socket() failed to get socket descriptor for using ioctl() : Operation not permitted' error. Run the code with sudo privileges.
+    Make sure to change mac address at line# 499 - 504, if need to point to different server.
+
+    Execute Program
+    ================
+    compile :
+        gcc standalone.c -o standalone
+    run : 
+        ./standalone ./config.json
+
+        //if 'Operation not permitted' error occurs, sudo privileges are required
+        sudo ./standalone ./config.json 
+
 
