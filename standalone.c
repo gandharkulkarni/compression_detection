@@ -36,6 +36,8 @@ https://www.devdungeon.com/content/using-libpcap-c
 clock_t low_start, low_end, high_start, high_end, total_time, low_diff, high_diff;
 
 int break_loop = 0;
+
+/** Stops listening for packet */
 void 
 stop_packet_capture(int sig)
 {
@@ -176,7 +178,8 @@ tcp4_checksum(struct ip iphdr, struct tcphdr tcphdr)
 }
 
 // Allocate memory for an array of chars.
-char *allocate_strmem(int len)
+char 
+*allocate_strmem(int len)
 {
 
   void *tmp;
@@ -252,6 +255,7 @@ int
   }
 }
 
+/** Struct to store config values */
 struct config
 {
   char client_ip[50];
@@ -267,6 +271,8 @@ struct config
   int time_to_live;
 };
 struct config *config;
+
+/** Reads config file */
 struct cJSON *read_config(char *path)
 {
   FILE *fp;
@@ -282,6 +288,7 @@ struct cJSON *read_config(char *path)
   return json;
 }
 
+/** Initializes struct to store config values */
 void 
 get_config_struct(cJSON *json)
 {
@@ -354,6 +361,9 @@ get_config_struct(cJSON *json)
   }
 }
 
+/** Sends UDP packet train
+ * @param entropy_flag 0 for low entropy; 1 for high entropy
+*/
 void 
 send_udp_packet_train(int entropy_flag)
 {
@@ -436,6 +446,12 @@ send_udp_packet_train(int entropy_flag)
   close(udp_sockfd);
 }
 
+/** 
+ * Sends TCP Syn packet 
+ * @param tcp_port Syn destination port
+ * @param entropy_flag 0 for low entropy; 1 for high entropy flag
+ * @return int SUCCESS
+*/
 int 
 send_tcp_syn_packet(int tcp_port, int entropy_flag)
 {
@@ -715,6 +731,10 @@ send_tcp_syn_packet(int tcp_port, int entropy_flag)
 
   return (EXIT_SUCCESS);
 }
+
+/**
+ * Listens on port to capture RST packet
+*/
 void
 *receive_rst_packet()
 {
@@ -795,6 +815,7 @@ void
   }
   pthread_exit(NULL);
 }
+
 void 
 main(int argc, char *args[])
 {
@@ -843,6 +864,9 @@ main(int argc, char *args[])
   return;
 }
 
+/**
+ * Prints config details
+*/
 void print_config()
 {
   printf("%s\n", config->server_ip);
