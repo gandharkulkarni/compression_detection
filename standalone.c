@@ -31,7 +31,6 @@ clock_t low_start, low_end, high_start, high_end, total_time, low_diff, high_dif
 int break_loop = 0;
 void stop_packet_capture(int sig)
 {
-  //pcap_breakloop(pcap_handle);
   break_loop=1;
 }
 
@@ -249,6 +248,7 @@ int *allocate_intmem(int len)
 
 struct config
 {
+  char client_ip[50];
   char server_ip[50];
   int source_port_udp;
   int destination_port_udp;
@@ -278,6 +278,7 @@ struct cJSON *read_config(char *path)
 
 void get_config_struct(cJSON *json)
 {
+  const cJSON *client_ip = NULL;
   const cJSON *server_ip = NULL;
   const cJSON *src_port_udp = NULL;
   const cJSON *dst_port_udp = NULL;
@@ -290,6 +291,7 @@ void get_config_struct(cJSON *json)
   const cJSON *time_to_live = NULL;
 
   /* Parse config fields */
+  client_ip = cJSON_GetObjectItemCaseSensitive(json, "client_ip");
   server_ip = cJSON_GetObjectItemCaseSensitive(json, "server_ip");
   src_port_udp = cJSON_GetObjectItemCaseSensitive(json, "source_port_udp");
   dst_port_udp = cJSON_GetObjectItemCaseSensitive(json, "destination_port_udp");
@@ -303,6 +305,7 @@ void get_config_struct(cJSON *json)
 
   /* Create config struct */
   config = malloc(sizeof *config);
+  strcpy(config->client_ip, client_ip->valuestring);
   strcpy(config->server_ip, server_ip->valuestring);
   config->source_port_udp = src_port_udp->valueint;
   config->destination_port_udp = dst_port_udp->valueint;
@@ -425,7 +428,7 @@ void send_udp_packet_train(int entropy_flag)
   close(udp_sockfd);
 }
 
-int send_packets(int tcp_port, int entropy_flag)
+int send_tcp_syn_packet(int tcp_port, int entropy_flag)
 {
   int i, status, frame_length, sd, bytes, *ip_flags, *tcp_flags;
   char *interface, *target, *src_ip, *dst_ip;
@@ -500,7 +503,7 @@ int send_packets(int tcp_port, int entropy_flag)
   dst_mac[5] = 0x6e;
 
   // Source IPv4 address: you need to fill this out
-  strcpy(src_ip, "10.0.0.136");
+  strcpy(src_ip, config->client_ip);
 
   // Destination URL or IPv4 address: you need to fill this out
   strcpy(target, config->server_ip);
@@ -714,7 +717,7 @@ void *receive_rst_packet()
 
   char buffer[4096];
   bzero(buffer, 4096);
-  int packet_count = 0;
+
   int rst_count = 0;
   int sd;
   // Create raw socket
@@ -729,13 +732,8 @@ void *receive_rst_packet()
     {
       printf("Error in recv");
     }
-    if (packet_count == 0 & n > 0)
-    {
-      alarm(60);
-      signal(SIGALRM, stop_packet_capture);
-    }
     clock_t temp=clock();
-    packet_count++;
+
     // Extract Ethernet header, IP header, and TCP header
     struct ether_header *eth_header = (struct ether_header *)buffer;
     struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
@@ -808,18 +806,23 @@ void main(int argc, char *args[])
   }
 
   // Low entropy data packet train
-  send_packets((config->destination_port_tcp_head_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_head_syn),0);
+  /* Start the timer after 1st TCP Syn Head */
+  alarm(60);
+  signal(SIGALRM, stop_packet_capture);
+
+
   send_udp_packet_train(0);
-  send_packets((config->destination_port_tcp_tail_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_tail_syn),0);
   
   //Sleep for IMT time
   printf("Sleep for %d seconds\n",config->inter_measurement_time);
   sleep(config->inter_measurement_time);
 
   // High entropy data packet train
-  send_packets((config->destination_port_tcp_head_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_head_syn),0);
   send_udp_packet_train(1);
-  send_packets((config->destination_port_tcp_tail_syn),0);
+  send_tcp_syn_packet((config->destination_port_tcp_tail_syn),0);
 
   pthread_exit(NULL);
   return;
