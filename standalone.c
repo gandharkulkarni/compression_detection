@@ -269,6 +269,7 @@ struct config
   int inter_measurement_time;
   int udp_packets;
   int time_to_live;
+  int tcp_syn_source_port;
 };
 struct config *config;
 
@@ -303,6 +304,7 @@ get_config_struct(cJSON *json)
   const cJSON *inter_measurement_time = NULL;
   const cJSON *udp_packets = NULL;
   const cJSON *time_to_live = NULL;
+  const cJSON *tcp_syn_source_port = NULL;
 
   /* Parse config fields */
   client_ip = cJSON_GetObjectItemCaseSensitive(json, "client_ip");
@@ -316,6 +318,7 @@ get_config_struct(cJSON *json)
   inter_measurement_time = cJSON_GetObjectItemCaseSensitive(json, "inter_measurement_time");
   udp_packets = cJSON_GetObjectItemCaseSensitive(json, "udp_packets");
   time_to_live = cJSON_GetObjectItemCaseSensitive(json, "time_to_live");
+  tcp_syn_source_port = cJSON_GetObjectItemCaseSensitive(json, "tcp_syn_source_port");
 
   /* Create config struct */
   config = malloc(sizeof *config);
@@ -326,7 +329,7 @@ get_config_struct(cJSON *json)
   config->destination_port_tcp_head_syn = dst_port_tcp_head_syn->valueint;
   config->destination_port_tcp_tail_syn = dst_port_tcp_tail_syn->valueint;
   config->tcp_port = tcp_port->valueint;
-
+  config->tcp_syn_source_port = tcp_syn_source_port->valueint;
   if (udp_payload_size->valueint == 0)
   {
     config->udp_payload_size = 1000;
@@ -620,7 +623,7 @@ send_tcp_syn_packet(int tcp_port, int entropy_flag)
   // TCP header
 
   // Source port number (16 bits)
-  tcphdr.th_sport = htons(4444);
+  tcphdr.th_sport = htons(config->tcp_syn_source_port);
 
   // Head Syn Destination port number (16 bits)
   tcphdr.th_dport = htons(tcp_port);
@@ -763,25 +766,25 @@ void
     struct ether_header *eth_header = (struct ether_header *)buffer;
     struct iphdr *iph = (struct iphdr *)(buffer + sizeof(struct ether_header));
     struct tcphdr *tcph = (struct tcphdr *)(buffer + sizeof(struct ether_header) + sizeof(struct iphdr));
-    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest) == 4444 && (ntohs(tcph->source) == (config->destination_port_tcp_head_syn) || ntohs(tcph->source) == (config->destination_port_tcp_tail_syn)))
+    if (tcph->rst && tcph->th_ack && ntohs(tcph->dest) == config->tcp_syn_source_port && (ntohs(tcph->source) == (config->destination_port_tcp_head_syn) || ntohs(tcph->source) == (config->destination_port_tcp_tail_syn)))
     {
       rst_count++;
       char src[INET_ADDRSTRLEN];
       inet_ntop(AF_INET, &iph->saddr, src, INET_ADDRSTRLEN);
       // printf("Received RST #%d packet src : %d dst: %d ip: %s time: ( %ld ) \n\n", rst_count, ntohs(tcph->source), ntohs(tcph->dest), src, temp);
-      if (rst_count == 1 && ntohs(tcph->source) == (config->destination_port_tcp_head_syn) && ntohs(tcph->dest) == 4444)
+      if (rst_count == 1 && ntohs(tcph->source) == (config->destination_port_tcp_head_syn) && ntohs(tcph->dest) == config->tcp_syn_source_port)
       {
         low_start = temp;
       }
-      else if (rst_count == 2 && ntohs(tcph->source) == (config->destination_port_tcp_tail_syn) && ntohs(tcph->dest) == 4444)
+      else if (rst_count == 2 && ntohs(tcph->source) == (config->destination_port_tcp_tail_syn) && ntohs(tcph->dest) == config->tcp_syn_source_port)
       {
         low_end = temp;
       }
-      else if (rst_count == 3 && ntohs(tcph->source) == (config->destination_port_tcp_head_syn) && ntohs(tcph->dest) == 4444)
+      else if (rst_count == 3 && ntohs(tcph->source) == (config->destination_port_tcp_head_syn) && ntohs(tcph->dest) == config->tcp_syn_source_port)
       {
         high_start = temp;
       }
-      else if (rst_count == 4 && ntohs(tcph->source) == (config->destination_port_tcp_tail_syn) && ntohs(tcph->dest) == 4444)
+      else if (rst_count == 4 && ntohs(tcph->source) == (config->destination_port_tcp_tail_syn) && ntohs(tcph->dest) == config->tcp_syn_source_port)
       {
         high_end = temp;
       }
@@ -799,7 +802,7 @@ void
     high_diff = (((double)high_end) - ((double)high_start)) * 1000 / ((double)CLOCKS_PER_SEC);
 
     int threshold = 100;
-    // printf("%ld - %ld  = %d\n",high_diff, low_diff, fabs(high_diff-low_diff));
+    printf("%ld - %ld  = %f\n",high_diff, low_diff, fabs(high_diff-low_diff));
     if (fabs(high_diff - low_diff) <= threshold)
     {
       printf("No compression detected\n");
