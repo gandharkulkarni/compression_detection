@@ -799,8 +799,8 @@ void
     high_diff = (((double)high_end) - ((double)high_start)) * 1000 / ((double)CLOCKS_PER_SEC);
 
     int threshold = 100;
-    // printf("%ld - %ld  = %d\n",high_diff, low_diff, abs(high_diff-low_diff));
-    if (abs(high_diff - low_diff) <= threshold)
+    // printf("%ld - %ld  = %d\n",high_diff, low_diff, fabs(high_diff-low_diff));
+    if (fabs(high_diff - low_diff) <= threshold)
     {
       printf("No compression detected\n");
     }
