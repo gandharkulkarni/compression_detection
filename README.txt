@@ -38,7 +38,8 @@ If you expect to use default value, enter 0 in respective field, the program wil
         "udp_payload_size":1000, //The Size of the UDP Payload in the UDP Packet Train, (default value: 1000B)
         "inter_measurement_time":15, //Inter-Measurement Time, γ (default value: 15 seconds)
         "udp_packets":6000, //The Number of UDP Packets in the UDP Packet Train, n (default value: 6000 )
-        "time_to_live":255 //TTL for the UDP Packets (default value: 255 )
+        "time_to_live":255, //TTL for the UDP Packets (default value: 255 )
+        "tcp_syn_source_port":4444 //Source port for tcp syn packets
     }
 
 Client-Server Application
