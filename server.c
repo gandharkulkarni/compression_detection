@@ -222,8 +222,8 @@ receive_packets_from_client()
     }
     printf("Received %d packets.\n", i);
     //calculate time elapsed in seconds
-	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) / ((double)CLOCKS_PER_SEC);
-	low_entr_time = total_time*1000; //convert seconds to milliseconds
+	total_time = (((double)low_entr_end_time) - ((double)low_entr_start_time)) * 1000 / ((double)CLOCKS_PER_SEC);
+	low_entr_time = total_time; //convert seconds to milliseconds
     //printf("Low entropy packet train : Size: %d, time :%f\n", i, low_entr_time);
     
     printf("Receiving...\n");
@@ -252,11 +252,11 @@ receive_packets_from_client()
         alarm(0);
     }
     printf("Received %d packets.\n", i);
-    total_time = (((double)high_entr_end_time) - ((double)high_entr_start_time)) / ((double)CLOCKS_PER_SEC);
-	high_entr_time = total_time*1000; //convert seconds to milliseconds
+    total_time = (((double)high_entr_end_time) - ((double)high_entr_start_time)) * 1000 / ((double)CLOCKS_PER_SEC);
+	high_entr_time = total_time; //convert seconds to milliseconds
     //printf("High entropy packet train : Size: %d, time :%f\n", i, high_entr_time);
-    //printf("Difference: %f\n", abs(high_entr_time-low_entr_time));
-    return abs(high_entr_time-low_entr_time);
+    printf("Difference: %f\n", fabs(high_entr_time-low_entr_time));
+    return fabs(high_entr_time-low_entr_time);
 }
 
 /**
